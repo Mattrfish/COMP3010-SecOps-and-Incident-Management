@@ -16,5 +16,7 @@ Analyse a provided `.pcap` (packet capture) file to investigate a suspected intr
 - Indicators of compromise (IOCs), including malicious domains, IP addresses, and downloaded files.
 
 
-These details can be found in the `Coursework1` folder.
+These details can be found inside the `Coursework1` folder.
+
+The Youtube Walkthrough link for CW1 can be found here: 
 
