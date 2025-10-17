@@ -22,28 +22,37 @@ and 16:45:30. finejewels.com.au , thietbiagt.com , new.americold.com
 
 Part 2: Command and Control (C2) Activity
 8. Which Certificate Authority (CA) issued the SSL certificate for the first
-domain identified in question 7?
+domain identified in question 7? GoDaddy Root Certificate Authority 
+
 9. What are the two IP addresses of the Cobalt Strike servers? (Provide them
-in sequential order).
-Hint: Inspect the Conversations menu option
-10. What is the value of the Host header for the first Cobalt Strike IP address?
-Hint: Apply a filter to isolate DNS queries.
-11. What is the domain name associated with the first Cobalt Strike IP address?
-Hint: Take a closer look at HTTPS (443)
+in sequential order). 185.106.96.158, 185.125.204.174
+Hint: Inspect the Conversations menu option 
+
+10. What is the value of the Host header for the first Cobalt Strike IP address? Host: ocsp.verisign.com\r\n
+Hint: Apply a filter to isolate DNS queries. 
+
+11. What is the domain name associated with the first Cobalt Strike IP address? survmeter.live
+Hint: Take a closer look at HTTPS (443) 
+
 12. What is the domain name associated with the second Cobalt Strike IP
-address?
-Hint: Apply a filter to capture HTTP POST requests.
-13. What is the domain name used for the post-infection traffic?
+address?securitybusinpuff.com
+Hint: Apply a filter to capture HTTP POST requests. 
+
+13. What is the domain name used for the post-infection traffic? maldivehost.net
+
 14. What are the first eleven characters of the data the victim host sends to the
-malicious domain identified in the previous question?
-15. What was the length of the first packet the victim sent to the C2 server?
+malicious domain identified in the previous question? zLIisQRWZI9
+
+15. What was the length of the first packet the victim sent to the C2 server? 281
+
 16. What was the Server header value for the malicious domain from question
-13?
+13? Apache/2.4.49 (cPanel) OpenSSL/1.1.1l mod_bwlimited/1.4
+
+
 Part 3: Final Exfiltration/Check-in
 17. What was the date and time (in yyyy-mm-dd hh:mm:ss UTC format) when
 the DNS query occurred for the domain used by the malware to check the
 victim's external IP address?
-COMP3010 Security Operations & Incident Management
 18. What was the domain name in the DNS query from the previous question?
 19. What was the first email address observed in the SMTP traffic in the pcap
 file (the MAIL FROM address)?
