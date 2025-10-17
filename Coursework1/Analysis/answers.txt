@@ -2,7 +2,7 @@ Part 1: Initial Infection & File Transfer
 1. When did the initial malicious HTTP connection occur? (Provide the date
 and time in yyyy-mm-dd hh:mm:ss format). 2021-09-24 16:44:38
 
-2. What is the name of the compressed file that the victim downloaded? incidunt-consequatur/documents.zip
+2. What is the name of the compressed file that the victim downloaded? documents.zip
 
 3. Which domain hosted the malicious compressed file? attirenepal.com
 
@@ -12,7 +12,7 @@ and time in yyyy-mm-dd hh:mm:ss format). 2021-09-24 16:44:38
 malicious IP address that served the compressed file. LiteSpeed
 
 6. What is the version number of the web server identified in the previous
-question? not specified (Server: LiteSpeed\r\n)
+question? PHP/7.2.34
 
 7. Identify the three additional domains that were involved in downloading
 malicious files to the victim host.
