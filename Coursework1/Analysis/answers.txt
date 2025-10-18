@@ -52,8 +52,11 @@ malicious domain identified in the previous question? zLIisQRWZI9
 Part 3: Final Exfiltration/Check-in
 17. What was the date and time (in yyyy-mm-dd hh:mm:ss UTC format) when
 the DNS query occurred for the domain used by the malware to check the
-victim's external IP address?
-18. What was the domain name in the DNS query from the previous question?
+victim's external IP address? 2021-09-24 17:00:04	
+
+18. What was the domain name in the DNS query from the previous question? api.ipify.org.
+
 19. What was the first email address observed in the SMTP traffic in the pcap
-file (the MAIL FROM address)?
-20. Follow the stream from Q19. What is ho3ein.sharifi’s password?
+file (the MAIL FROM address)? MAIL FROM:<farshin@mailfa.com>
+
+20. Follow the stream from Q19. What is ho3ein.sharifi’s password? MTM2OTEzNjk=
