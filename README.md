@@ -18,7 +18,44 @@ The objective of this SOC simulation is to complete the assigned set of BOTSv3â€
 
 ### Environment Setup
 
+To facilitate this investigation, a localized Splunk Enterprise instance was deployed on an Ubuntu Virtual Machine. This approach mirrors a standard SOC analyst's sandbox environment, allowing for safe log analysis without impacting production servers.
+
+1. Splunk Installation:
+The Splunk Enterprise installer (.tgz) was retrieved via the github. The package was extracted to the /opt directory. This directory is the industry-standard location for unbundled software on Linux systems, ensuring that the security tools remain separate from the core operating system files.
+
+```bash
+# Commands used for installation
+wget -O splunk-8.x.x-linux-2.6-amd64.tgz 'https://download.splunk.com/...'
+sudo tar -xvzf splunk-*.tgz -C /opt
+sudo /opt/splunk/bin/splunk start --accept-license
+```
+
+2. Service Initialization:
+The Splunk service was started on localhost:8000.
+
+![](Images/SplunkServer.png)
+
 ### Dataset Ingestion
+The BOTSv3 dataset was retrieved from the official Splunk GitHub repository. Proper data ingestion is critical in a SOC to ensure time-stamps are parsed correctly and logs are searchable.
+
+1. Retrieving Data:
+The dataset was downloaded and extracted. In a real-world SOC, data is usually ingested via Forwarders, but for this simulation, the data was uploaded directly as a Splunk App.
+
+![](Images/BOTSv3Github.png)
+![](Images/BOTSv3DataSet.png)
+
+2.Indexing & App Configuration:
+The extracted data folder was moved to the Splunk apps directory. This ensures that all the specific field extractions and sourcetypes for the BOTSv3 data are automatically applied when Splunk restarts.
+
+```bash
+# Command used to install the BOTSv3 App
+cp -r botsv3_data_set /opt/splunk/etc/apps/
+```
+![](Images/BOTSv3AppsInstall.png)
+
+Segregating this data into its own index is best practice.
+
+![](Images/BOTSv3Index.png)
 
 ---
 
