@@ -12,21 +12,21 @@ The objective of this SOC simulation is to complete the assigned set of BOTSv3â€
 
 ## SOC Roles & Incident Handling Reflection
 
-A professional SOC is usually structured into different levels to efficiently manage security alerts. 
+A professional SOC is usually structured into different levels to efficiently manage security alerts [1]. 
 
 * **Level 1 Analysts:** Responsible for reviewing SIEM alerts to identify if they are false positives or genuine threats. 
 * **Level 2 Analysts:** Handle escalated, high-priority incidents requiring deep investigation. 
-* **Level 3 Analysts:** These are highly experienced analysts who search for threat indications (threat hunting), while the **SOC Manager** oversees operations and reports to the CISO. [1]
+* **Level 3 Analysts:** These are highly experienced analysts who search for threat indications (threat hunting), while the **SOC Manager** oversees operations and reports to the CISO. 
 
 Additional roles include security engineers who are responsible for implementing security solutions and malware analysts who reverse engineer malware to improve security detection.
 
 In this BOTSv3 exercise, I am simulating the responsibilities of a **Level 2/3 analyst**. I am not reacting to alerts like a level 1 analyst would; instead I am using Splunk SPL to search for indicators of compromise (IOCs) and reconstruct the attack timeline. 
 
-This analysis follows the **NIST Incident Response Lifecycle** which has four connected stages: 
+This analysis follows the **NIST Incident Response Lifecycle** which has four connected stages [2]: 
 1. **Prevention:** The incident stems from a failure in the Prevention phase, specifically due to Frothly's misconfigured AWS cloud permissions and inadequate access controls.
 2. **Detection and Analysis:** This is the primary focus of the exercise. It involves interrogating Splunk logs to distinguish between benign network noise and genuine threats, confirming the scope of the breach.
 3. **Response:** The analysis provides the details of the incident so that threats can be contained and eradicated at this stage. 
-4. **Recovery:** This stage focusses on "lessons learned". By defining the root cause, patches can be implemented to ensure these specific vulnerabilities are not re-exploited. [2]
+4. **Recovery:** This stage focusses on "lessons learned". By defining the root cause, patches can be implemented to ensure these specific vulnerabilities are not re-exploited. 
 
 ---
 
@@ -90,8 +90,8 @@ Segregating this data into its own index is best practice.
 
 ## References
 
-[1] https://www.paloaltonetworks.co.uk/cyberpedia/soc-roles-and-responsibilities
-[2] https://auditboard.com/blog/nist-incident-response
+* [1] https://www.paloaltonetworks.co.uk/cyberpedia/soc-roles-and-responsibilities
+* [2] https://auditboard.com/blog/nist-incident-response
 
 ---
 
