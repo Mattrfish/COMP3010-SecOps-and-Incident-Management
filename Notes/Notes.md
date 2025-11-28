@@ -1,0 +1,21 @@
+## AI Questions
+
+ ### Question 1,2 + 3
+* **How to exclude an event in spl query?** "Either != or NOT or Where count != 100"
+* **Give me an example of different keyword search queries using SPL. "**Basic: "Index=botsv3 frothly" Phrases: "Index=botsv3 'access denied'" Wildcards: "Index=botsv3 fail\*" "
+* **can you explain gacrux.i please as the host name for the web servers. I cant find that the web servers are officially defined as web servers.** 
+
+"In the Frothly environment, gacrux is the naming convention for the fleet of Linux Web Servers. The Name: "Gacrux" is the third-brightest star in the Southern Cross. Frothly uses a celestial naming scheme (e.g., Matar is the mail server, Mars is a server, Hoth is a domain controller). The Suffix (.i-xxxx): The .i-0920... part represents the AWS EC2 Instance ID. Because these servers are in an Auto Scaling Group, they spin up and down automatically, appending their unique AWS ID to the hostname gacrux."
+
+## General Questions + Notes/Reminders
+ ### Question 1,2 + 3
+* Not sure how to find the full mfa path. Could use wildcard for mfa to reduce noise and use != to exclude ConsoleLogin - should be able to find the full json path for mfa this way?
+* Remember to use the fields tab to help with queries - could look through the sourcetype to see if there's anything related to hardware? Could it just be called hardware?
+* Found that sourcetype=hardware does exsit.
+* Hardware sourcetype shows the list hardware for the web servers, however What is gacrux.i? Its not clear that it is a web server, cant seem to find it officially defined anywhere.
+* Most likely just a name used for asset management to easily identify the servers? - Correct and it is an ec2 instance. Just need to find the web traffic they are serving to be sure.
+* Quick search found that using "access\_combined in Splunk refers to a pre-trained source type for NCSA combined HTTP web server logs" - if i search in the sourcetype it should prove whether it is a web server. 
+* Shows loads of successful GET requests from an elastic load balance health check to see if its ready to serve web traffic - proves its a web server as if it goes down then the ELB can stop sending it traffic. 
+
+
+
