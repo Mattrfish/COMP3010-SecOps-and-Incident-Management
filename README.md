@@ -110,7 +110,9 @@ Segregating this data into its own index is best practice.
 
 **Methodology:** I started by searching index=botsv3 to explore the available data. I browsed the Sourcetype field list and identified a relevant sourcetype named hardware. Filtering for sourcetype="hardware" returned three events. The log data listed the CPU_TYPE as 'Intel Xeon CPU E5-2676 v3'. 
 
-**Splunk Query:** ```index=botsv3 sourcetype=”hardware” ```
+I was unsure on how to prove it is a web server but i did some digging on the name gacrux which is just a naming convesion frothly have used for their different servers. Follwing this I used sourcetype="access_combined" along with the hostname to reveal that these hosts were generating Apache web logs. Furthermore, I observed high-frequency HTTP GET requests from the User-Agent 'ELB-HealthChecker/2.0'. This specific traffic pattern confirms that these instances are registered targets behind an AWS Elastic Load Balancer, actively serving HTTP traffic."
+
+**Splunk Query:** ```index=botsv3 sourcetype=”hardware” ``` ```index=botsv3 sourcetype="access_combined" host="gacrux.i-0920036c8ca91e501" http*```
 
 **SOC Relevance:** An accurate asset inventory needs to be maintained, with the SOC knowing hardware specififcaitons to help. This is to determine that if a server with a low-power CPU suddenly shows 100% usage, it could indicate a crypto-mining infection.
 
