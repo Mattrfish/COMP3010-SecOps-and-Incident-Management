@@ -84,7 +84,7 @@ Segregating this data into its own index is best practice.
 
 **Methodology:** To identify IAM users accessing services within the Frothly AWS environment, I analyzed AWS CloudTrail logs, which record API activity. I filtered the data for userIdentity.type='IAMUser' to isolate specific user actions and exclude automated AWS services. To summarize the findings, I used the stats command to group by userIdentity.userName and list the eventSource values. This transformed thousands of raw log lines into a clean, alphabetical table of users and their accessed services.
 
-**Splunk Query:** ```bash index=botsv3 sourcetype="aws:cloudtrail" userIdentity.type="IAMUser"
+**Splunk Query:** ```index=botsv3 sourcetype="aws:cloudtrail" userIdentity.type="IAMUser"
 | stats values(eventSource) by “Services Accessed” by userIdentity.userName ```
 
 **SOC Relevance:** Monitoring IAM user activity is fundamental to cloud security. By auditing which users are accessing which services a SOC analyst can detect users accessing services that they do not need or are authorised to access and compromised accounts.
@@ -97,7 +97,7 @@ Segregating this data into its own index is best practice.
 
 **Methodology:** To identify AWS API activity occurring without Multi-Factor Authentication (MFA), I performed a keyword search using *mfa* against the aws:cloudtrail sourcetype. I explicitly excluded ConsoleLogin events to isolate programmatic API calls from web interface logins. This revealed the nested JSON path userIdentity.sessionContext.attributes.mfaAuthenticated. To verify, I ran a stats count on this field, which returned 2,155 instances where the value was false.
 
-**Splunk Query:** ```bash index=botsv3 sourcetype="aws:cloudtrail" eventName!="ConsoleLogin" | stats count by userIdentity.sessionContext.attributes.mfaAuthenticated ```
+**Splunk Query:** ```index=botsv3 sourcetype="aws:cloudtrail" eventName!="ConsoleLogin" | stats count by userIdentity.sessionContext.attributes.mfaAuthenticated ```
 
 **SOC Relevance:** MFA is a critical layer of security. SOC analysts need to monitor MFA for bypasses, credential compromises, and insider abuse, which could look like admins performing sensitive actions, which MFA cannot prevent on its own. 
 
@@ -110,7 +110,7 @@ Segregating this data into its own index is best practice.
 
 **Methodology:** I started by searching index=botsv3 to explore the available data. I browsed the Sourcetype field list and identified a relevant sourcetype named hardware. Filtering for sourcetype="hardware" returned three events. The log data listed the CPU_TYPE as 'Intel Xeon CPU E5-2676 v3'. 
 
-**Splunk Query:** ```bash index=botsv3 sourcetype=”hardware” ```
+**Splunk Query:** ```index=botsv3 sourcetype=”hardware” ```
 
 **SOC Relevance:** An accurate asset inventory needs to be maintained, with the SOC knowing hardware specififcaitons to help. This is to determine that if a server with a low-power CPU suddenly shows 100% usage, it could indicate a crypto-mining infection.
 
