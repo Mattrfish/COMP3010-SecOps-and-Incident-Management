@@ -82,12 +82,12 @@ Segregating this data into its own index is best practice.
 
 **Answer:** bstoll,btun,splunk_access,web_admin
 
-**Methodology:** To identify IAM users accessing services within the Frothly AWS environment, I analyzed AWS CloudTrail logs, which record API activity. I filtered the data for userIdentity.type='IAMUser' to isolate specific user actions and exclude automated AWS services. To summarize the findings, I used the stats command to group by userIdentity.userName and list the eventSource values. This transformed thousands of raw log lines into a clean, alphabetical table of users and their accessed services.
+**Methodology:** To identify IAM users accessing services within the Frothly AWS environment, I analysed AWS CloudTrail logs, which record API activity. I filtered the data for userIdentity.type='IAMUser' to isolate specific user actions and exclude automated AWS services. To summarize the findings, I used the stats command to group by userIdentity.userName and list the eventSource values. This transformed thousands of raw log lines into a clean, alphabetical table of users and their accessed services.
 
 **Splunk Query:** ```index=botsv3 sourcetype="aws:cloudtrail" userIdentity.type="IAMUser"
 | stats values(eventSource) by “Services Accessed” by userIdentity.userName ```
 
-**SOC Relevance:** Monitoring IAM user activity is fundamental to cloud security. By auditing which users are accessing which services a SOC analyst can detect users accessing services that they do not need or are authorised to access and compromised accounts.
+**SOC Relevance:** Monitoring IAM user activity is fundamental to cloud security. By auditing which users are accessing specific services, a SOC analyst can detect violations of the principle of least privilege (usrs accessing services irrelevant to their role) and identify anomaloud behviour that typically signals a compromised account.
 
 ![Question1](Images/Question1.png)
 
