@@ -164,7 +164,7 @@ The bucket name is a useful indicator for the SOC to understand the sensitivity 
 
 **Methodology:** To locate the uploaded text file, I filtered for the sourcetype aws:s3:accesslogs and narrowed the search by filtering for the .txt file extension. This reduced the noise to just three events. To identify the specific file upload, I filtered for the PUT method (indicating a write operation). This isolated a single successful event, revealing the filename in the key field: OPEN_BUCKET_PLEASE_FIX.txt.
 
-**Splunk Query:** index=botsv3 sourcetype="aws:s3:accesslogs" .txt PUT
+**Splunk Query:** ``` index=botsv3 sourcetype="aws:s3:accesslogs" .txt PUT ```
 
 **SOC Relevance:** Analyzing access logs for public buckets helps the SOC determine the impact of a breach. The specific use of the PUT method confirms the bucket was writable by the public. This triggers an immediate incident response workflow to scan the entire bucket for other uploaded artifacts, such as webshells, ransomware notes, or illegal content.
 
@@ -173,6 +173,23 @@ If this bucket serves assets for a website (e.g., images or JavaScript), an atta
 In this case, the specific filename (OPEN_BUCKET_PLEASE_FIX.txt) indicates a "Gray Hat" actor scanning for vulnerabilities. However, a SOC must still treat this as a full breach, as the "open door" allowed anyone to enter. The SOC must validate that no other actors utilized the same vulnerability window to exfiltrate data (GET requests) or upload malware before the researcher arrived.
 
 ![Question7](Images/Question7.png)
+
+### Question 8: FQDN of Unique Endpoint
+
+**Answer:** BSTOLL-L.froth.ly
+
+**Methodology:** To find the FQDN of the endpoint running a unique operating system, I used the sourcetype winhostmon. I then grouped the results by host and operating system, which revealed 8 different hosts. While the others were running Microsoft Windows 10 Pro, I identified one outlier running a different OS: BSTOLL-L, which uses Microsoft Windows 10 Enterprise. 
+
+However, the standard host field only provided the short hostname, leaving the domain uncertain. To resolve this, I performed some investigative digging through the raw log entries for BSTOLL-L. After scanning through the event details, I located the ComputerName field, which explicitly listed the full network path as BSTOLL-L.froth.ly.
+
+**Splunk Query:** ``` index=botsv3 sourcetype="WinHostMon" | stats count by host, OS Version ``` ```index=botsv3 host="BSTOLL-L" computername```
+
+**SOC Relevance:** Identifying outliers in asset configurations is key to detecting high-risk assets. Personal laptops connected to the corporate network often lack standard security controls (patching/EDR), creating a soft entry point for attackers. 
+
+The "Enterprise" edition on a laptop typically implies an Administrative or Developer machine. These endpoints are high-priority targets for attackers because they often contain hardcoded credentials or direct access to production environments.
+
+![Question8](Images/Question8.png)
+![Question8.1](Images/Question8.1.png)
 
 ---
 

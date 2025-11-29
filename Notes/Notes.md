@@ -16,6 +16,13 @@
 * **Would an AWS upload of a txt file be a POST request?**
 "It is a great question because the answer is "Usually PUT, but sometimes POST.""
 
+### Question 8
+* **What does FQDN mean?"**
+FQDN stands for Fully Qualified Domain Name.
+
+It is the complete, absolute address of a specific computer or host on the internet or a private network. It leaves no ambiguity about which machine you are talking about.
+
+
 ## General Questions + Notes/Reminders
  ### Question 1,2 + 3
 * Not sure how to find the full mfa path. Could use wildcard for mfa to reduce noise and use != to exclude ConsoleLogin - should be able to find the full json path for mfa this way?
@@ -34,3 +41,7 @@
 * finding the txt file - could use a *txt wildcard to search specifcally for txt files, however there could be many txt files on there. Also need to find that it was uploaded rather than downloaded which i assume is a POST request? Turns out to be a PUT which i will use alongside the txt wildcard. (Turns out i can use it wtih method= instead of a wildcard)
 * The uploaded txt file could indicate a gray hat scanning for vulnerabilities to report or it could just be someone who stumbled across it and thought they should let them know its open. Couldve been a lot more serious. 
 
+### Question 8
+* What does FQDN stand for? Fully Qualified Domain Name  - hostname + domain name
+* Ive got the OS outlier (hostname) but how do i found the domain name as it doesnt appear under the hostname? some reasearhc and searching through logs found that it should be under "computername="
+*
