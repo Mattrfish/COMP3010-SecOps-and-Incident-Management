@@ -12,6 +12,10 @@
 
 "The bucket name often indicates the sensitivity of the data. A bucket named frothlywebcode implies source code (Intellectual Property risk), whereas a bucket named frothly-payroll would imply PII (Regulatory/GDPR risk). Knowing the specific bucket name allows analysts to search Pastebin or Dark Web forums to see if the exposed URL is being actively shared by attackers."
 
+### Question 7
+* **Would an AWS upload of a txt file be a POST request?**
+"It is a great question because the answer is "Usually PUT, but sometimes POST.""
+
 ## General Questions + Notes/Reminders
  ### Question 1,2 + 3
 * Not sure how to find the full mfa path. Could use wildcard for mfa to reduce noise and use != to exclude ConsoleLogin - should be able to find the full json path for mfa this way?
@@ -25,4 +29,8 @@
 ### Question 4,5 + 6
 * PutBucketAcl for tracking s3 Bucket permissions but how to find the permission for everyone to access? Could check the side fields panel - full json acl granted path with a uri. Following it through gives a uri link for "all users" so it must be this. Returns back the one event with the bucket set to "all users". Defo useful command for monitoring buckets permissions.
 * Within the json it should give me a username for the user that set it as public and the name of the bucket itself
+
+### Question 7
+* finding the txt file - could use a *txt wildcard to search specifcally for txt files, however there could be many txt files on there. Also need to find that it was uploaded rather than downloaded which i assume is a POST request? Turns out to be a PUT which i will use alongside the txt wildcard. (Turns out i can use it wtih method= instead of a wildcard)
+* The uploaded txt file could indicate a gray hat scanning for vulnerabilities to report or it could just be someone who stumbled across it and thought they should let them know its open. Couldve been a lot more serious. 
 

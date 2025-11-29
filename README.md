@@ -158,6 +158,22 @@ The bucket name is a useful indicator for the SOC to understand the sensitivity 
 
 ![Question6](Images/Question6.png)
 
+### Question 7: Uploaded Text File
+
+**Answer:** OPEN_BUCKET_PLEASE_FIX.txt
+
+**Methodology:** To locate the uploaded text file, I filtered for the sourcetype aws:s3:accesslogs and narrowed the search by filtering for the .txt file extension. This reduced the noise to just three events. To identify the specific file upload, I filtered for the PUT method (indicating a write operation). This isolated a single successful event, revealing the filename in the key field: OPEN_BUCKET_PLEASE_FIX.txt.
+
+**Splunk Query:** index=botsv3 sourcetype="aws:s3:accesslogs" .txt PUT
+
+**SOC Relevance:** Analyzing access logs for public buckets helps the SOC determine the impact of a breach. The specific use of the PUT method confirms the bucket was writable by the public. This triggers an immediate incident response workflow to scan the entire bucket for other uploaded artifacts, such as webshells, ransomware notes, or illegal content.
+
+If this bucket serves assets for a website (e.g., images or JavaScript), an attacker could overwrite legitimate files to launch Cross-Site Scripting (XSS) attacks against customers.
+
+In this case, the specific filename (OPEN_BUCKET_PLEASE_FIX.txt) indicates a "Gray Hat" actor scanning for vulnerabilities. However, a SOC must still treat this as a full breach, as the "open door" allowed anyone to enter. The SOC must validate that no other actors utilized the same vulnerability window to exfiltrate data (GET requests) or upload malware before the researcher arrived.
+
+![Question7](Images/Question7.png)
+
 ---
 
 ## Conclusion and Recommendations
