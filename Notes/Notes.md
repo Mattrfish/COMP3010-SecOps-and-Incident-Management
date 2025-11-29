@@ -17,5 +17,7 @@
 * Quick search found that using "access\_combined in Splunk refers to a pre-trained source type for NCSA combined HTTP web server logs" - if i search in the sourcetype it should prove whether it is a web server. 
 * Shows loads of successful GET requests from an elastic load balance health check to see if its ready to serve web traffic - proves its a web server as if it goes down then the ELB can stop sending it traffic. 
 
-
+### Question 4,5 + 6
+* PutBucketAcl for tracking s3 Bucket permissions but how to find the permission for everyone to access? Could check the side fields panel - full json acl granted path with a uri. Following it through gives a uri link for "all users" so it must be this. Returns back the one event with the bucket set to "all users". Defo useful command for monitoring buckets permissions.
+* Within the json it should give me a username for the user that set it as public and the name of the bucket itself
 

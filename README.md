@@ -121,6 +121,38 @@ Returning to the hardware logs for gacrux, I found the CPU_TYPE listed as 'Intel
 ![Question3](Images/Question3.png)
 ![Question3.1](Images/Question3.1.png)
 
+### Question 4: S3 Public Access Event ID
+
+**Answer:** ab45689d-69cd-41e7-8705-5350402cf7ac
+
+**Methodology:** To identify the specific API call from Bud that enabled public access, I began by searching for eventName='PutBucketAcl', which tracks changes to S3 bucket permissions. This returned two events. Instead of guessing, I analysed the 'Interesting Fields' sidebar to find parameters related to access control.
+I discovered a field named requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI. Checking the values for this field, I spotted http://acs.amazonaws.com/groups/global/AllUsers. I added this to my search to confirm the single relevant event, pointing to Event ID ab45689d-69cd-41e7-8705-5350402cf7ac.
+
+**Splunk Query:**  ```index=botsv3 sourcetype="aws:cloudtrail" eventName="PutBucketAcl" ```
+``` requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI="http://acs.amazonaws.com/groups/global/AllUsers" ```
+
+**SOC Relevance (Q4-6):** Misconfigured S3 buckets are a leading cause of data breaches. SOC analysts must set up real-time alerts for PutBucketAcl events that grant "AllUsers" access. Rapid detection allows the SOC to revoke public access before sensitive data is exfiltrated by scanners or bots. Further examination of the bucket also reveals the account that has set the bucket to public access. This means that its actions can be monitored using the IAM query to check if the account may have been compromised. 
+
+![Question4.0](Images/Question4.0.png)
+![Question4.1](Images/Question4.1.png)
+![Question4.2](Images/Question4.2.png)
+
+### Question 5: Bud's Username
+
+**Answer:** bstoll
+
+**Methodology:** Continuing the analysis of the JSON payload from the event identified in Question 4, I inspected the userIdentity object. This explicitly listed the userName of the actor who performed the action (setting the bucket to "AllUsers" access) as bstoll.
+
+![Question5](Images/Question5.png)
+
+### Question 6: Compromised S3 Bucket Name
+
+**Answer:** frothlywebcode
+
+**Methodology:** Within the same PutBucketAcl event found in Question 4, I expanded the requestParameters section of the JSON. This identified the specific target resource, revealing the bucket name as frothlywebcode.
+
+![Question6](Images/Question6.png)
+
 ---
 
 ## Conclusion and Recommendations
