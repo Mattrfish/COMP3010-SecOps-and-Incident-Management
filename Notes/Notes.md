@@ -7,6 +7,11 @@
 
 "In the Frothly environment, gacrux is the naming convention for the fleet of Linux Web Servers. The Name: "Gacrux" is the third-brightest star in the Southern Cross. Frothly uses a celestial naming scheme (e.g., Matar is the mail server, Mars is a server, Hoth is a domain controller). The Suffix (.i-xxxx): The .i-0920... part represents the AWS EC2 Instance ID. Because these servers are in an Auto Scaling Group, they spin up and down automatically, appending their unique AWS ID to the hostname gacrux."
 
+### Quesion 4,5 + 6
+* **What is relevance of a SOC understanding the names of buckets when checking if they are secure?**
+
+"The bucket name often indicates the sensitivity of the data. A bucket named frothlywebcode implies source code (Intellectual Property risk), whereas a bucket named frothly-payroll would imply PII (Regulatory/GDPR risk). Knowing the specific bucket name allows analysts to search Pastebin or Dark Web forums to see if the exposed URL is being actively shared by attackers."
+
 ## General Questions + Notes/Reminders
  ### Question 1,2 + 3
 * Not sure how to find the full mfa path. Could use wildcard for mfa to reduce noise and use != to exclude ConsoleLogin - should be able to find the full json path for mfa this way?
