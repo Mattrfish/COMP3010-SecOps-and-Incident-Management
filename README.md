@@ -83,8 +83,12 @@ By analysing AWS CloudTrail logs (userIdentity.type='IAMUser'), I isolated speci
 
 Monitoring this is fundamental to cloud security; by auditing which users access specific services, analysts can detect violations of least privilege and identify anomalous behaviour that signals compromised accounts. 
 
-**Query:** ```index=botsv3 sourcetype="aws:cloudtrail" userIdentity.type="IAMUser"```
-```| stats values(eventSource) by “Services Accessed” by userIdentity.userName ```
+```bash 
+# Query: 
+index=botsv3 sourcetype="aws:cloudtrail" userIdentity.type="IAMUser"
+| stats values(eventSource) by “Services Accessed” by userIdentity.userName 
+
+```
 
 ![Question1](Images/Question1.png)
 
@@ -94,7 +98,10 @@ To identify AWS API activity occurring without Multi-Factor Authentication (MFA)
 
 MFA is a critical layer of security. SOC analysts need to monitor MFA for bypasses, credential compromises, and insider abuse, which could look like admins performing sensitive actions, which MFA cannot prevent on its own. This high volume of non-MFA activity represents a critical risk, as compromised credentials would grant an attacker full access without the secondary barrier of MFA.
 
-**Query:** ```index=botsv3 sourcetype="aws:cloudtrail" eventName!="ConsoleLogin" | stats count by userIdentity.sessionContext.attributes.mfaAuthenticated ```
+```bash
+# Query: 
+index=botsv3 sourcetype="aws:cloudtrail" eventName!="ConsoleLogin" | stats count by userIdentity.sessionContext.attributes.mfaAuthenticated 
+```
 
 ![Question2.0](Images/Question2.0.png)
 ![Question2.1](Images/Question2.1.png)
@@ -109,7 +116,11 @@ Returning to the hardware logs for gacrux, I found the CPU_TYPE listed as **Inte
 
 An accurate Asset Inventory is a foundational SOC requirement. Understanding hardware allows analysts to distinguish between legitimate resource usage and malicious activity. For example, if a web server known to run high-performance CPUs suddenly experiences 100% utilization during low-traffic periods, it is a strong indicator of Cryptojacking (unauthorized crypto-mining) or a Denial of Service (DoS) attack.
 
-**Query:** ```index=botsv3 sourcetype=”hardware” ``` ```index=botsv3 sourcetype="access_combined" host="gacrux.i-0920036c8ca91e501" http*```
+```bash
+# Query: 
+index=botsv3 sourcetype=”hardware” 
+index=botsv3 sourcetype="access_combined" host="gacrux.i-0920036c8ca91e501" http*
+```
 
 ![Question3](Images/Question3.png)
 ![Question3.1](Images/Question3.1.png)
@@ -122,8 +133,11 @@ I discovered the field requestParameters.AccessControlPolicy.AccessControlList.G
 
 Misconfigured S3 buckets are a leading cause of data breaches. SOC analysts must set up real-time alerts for PutBucketAcl events that grant "AllUsers" access. Rapid detection allows the SOC to revoke public access before sensitive data is exfiltrated by scanners or bots. 
 
-**Query:**  ```index=botsv3 sourcetype="aws:cloudtrail" eventName="PutBucketAcl" ```
-``` requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI="http://acs.amazonaws.com/groups/global/AllUsers" ```
+```bash
+# Query: 
+index=botsv3 sourcetype="aws:cloudtrail" eventName="PutBucketAcl" 
+requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI="http://acs.amazonaws.com/groups/global/AllUsers" 
+```
 
 ![Question4.0](Images/Question4.0.png)
 ![Question4.1](Images/Question4.1.png)
@@ -156,7 +170,10 @@ If this bucket serves assets for a website (e.g., images or JavaScript), an atta
 
 In this case, the specific filename indicates a "Gray Hat" actor scanning for vulnerabilities. However, a SOC must still treat this as a full breach, as the "open door" allowed anyone to enter. The SOC must validate that no other actors utilized the same vulnerability window to exfiltrate data (GET requests) or upload malware before the researcher arrived.
 
-**Query:** ``` index=botsv3 sourcetype="aws:s3:accesslogs" .txt PUT ```
+```bash
+# Query: 
+index=botsv3 sourcetype="aws:s3:accesslogs" .txt PUT 
+```
 
 ![Question7](Images/Question7.png)
 
@@ -170,7 +187,11 @@ Identifying outliers in asset configurations is key to detecting high-risk asset
 
 The "Enterprise" edition on a laptop typically implies an Administrative or Developer machine. These endpoints are high-priority targets for attackers because they often contain hardcoded credentials or direct access to production environments.
 
-**Query:** ``` index=botsv3 sourcetype="WinHostMon" | stats count by host, OS Version ``` ```index=botsv3 host="BSTOLL-L" computername```
+```bash
+# Query: 
+index=botsv3 sourcetype="WinHostMon" | stats count by host, OS Version 
+index=botsv3 host="BSTOLL-L" computername
+```
 
 ![Question8](Images/Question8.png)
 ![Question8.1](Images/Question8.1.png)
