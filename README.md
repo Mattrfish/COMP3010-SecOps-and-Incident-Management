@@ -195,6 +195,19 @@ The "Enterprise" edition on a laptop typically implies an Administrative or Deve
 
 ## Conclusion and Recommendations
 
+The investigation successfully reconstructed the incident timeline using Splunk logs.  It was determined that the user bstoll (Bud), operating from the endpoint BSTOLL-L, modified the AWS environment configuration. This change resulted in the S3 bucket frothlywebcode being set to "All Users," granting full public access. This exposure was detected and exploited by an unidentified external actor who uploaded a file named OPEN_BUCKET_PLEASE_FIX.txt.
+
+While the nature of the uploaded file indicates a "Gray Hat" warning rather than a malicious attack, this vulnerability represents a critical failure. A malicious actor could have utilized this same access for data exfiltration, ransomware injection, or code corruption.
+
+The investigation highlighted a significant lack of security controls. The account bstoll demonstrated a failure to enforce Multi-Factor Authentication (MFA). Had MFA been active, it would have served as a secondary barrier even if credentials were compromised. Furthermore, the endpoint BSTOLL-L is running Windows 10 Enterprise; this suggests the user holds a high-privilege role (such as an Administrator or Developer), making the lack of security controls on this account a high-risk vulnerability.
+
+To remediate this incident and prevent reoccurrence, the following actions are recommended:
+* Immediate Containment: Revoke public access to the frothlywebcode bucket immediately and perform a full audit of the bucket contents to ensure no other malicious artifacts (e.g., webshells) were uploaded.
+* Credential Rotation: Reset the credentials for user bstoll immediately, treating the account as compromised.
+* Enforce MFA: Implement a strict policy requiring MFA for all IAM users, specifically enforcing it for API and CLI access, not just console logins.
+* Least Privilege Review: Conduct an audit of all IAM roles to ensure users like bstoll possess only the permissions necessary for their operational duties.
+
+
 ---
 
 ## Video Presentation
