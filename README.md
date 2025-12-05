@@ -103,7 +103,7 @@ cp -r botsv3_data_set /opt/splunk/etc/apps/
 
 **Objective:** Identify all IAM users accessing AWS services to audit for Least Privilege violations.
 
-**Analysis:** Querying ``aws:cloudtrail`` for ``userIdentity.type="IAMUser"`` allows us to isolate human actors from automated service roles. The ``stats`` command grouped these by username.
+**Analysis:** Querying **aws:cloudtrail** for **userIdentity.type="IAMUser"** allows us to isolate human actors from automated service roles. The **stats** command grouped these by username.
 
 ```bash 
 # Query: 
@@ -111,7 +111,7 @@ index=botsv3 sourcetype="aws:cloudtrail" userIdentity.type="IAMUser"
 | stats values(eventSource) by “Services Accessed” by userIdentity.userName 
 ```
 
-**Finding:** The users *bstoll,btun,splunk_access,and web_admin* were identified accessing AWS services. Knowing exactly which IAM users access AWS services allows the SOC to baseline normal behaviour, detect misuse of generic accounts like web_admin, and investigate suspicious or dormant accounts that suddenly become active.
+**Finding:** The users **bstoll,btun,splunk_access,** and **web_admin** were identified accessing AWS services. Knowing exactly which IAM users access AWS services allows the SOC to baseline normal behaviour, detect misuse of generic accounts like web_admin, and investigate suspicious or dormant accounts that suddenly become active.
 
 ![Figure 6](Images/Question1.png)
 Figure 6: Statistical table of IAM users and the specific AWS services they accessed.
@@ -120,9 +120,9 @@ Figure 6: Statistical table of IAM users and the specific AWS services they acce
 
 **Objective:** Detect AWS API activity performed without Multi-Factor Authentication (MFA).
 
-**Analysis:** To identify AWS API activity occurring without MFA, I performed a keyword search using *mfa* against the *aws:cloudtrail* sourcetype. I explicitly excluded ConsoleLogin events to isolate programmatic API calls from web interface logins. This revealed the nested JSON path **userIdentity.sessionContext.attributes.mfaAuthenticated**. 
+**Analysis:** To identify AWS API activity occurring without MFA, I performed a keyword search using **mfa** against the **aws:cloudtrail** sourcetype. I explicitly excluded ConsoleLogin events to isolate programmatic API calls from web interface logins. This revealed the nested JSON path **userIdentity.sessionContext.attributes.mfaAuthenticated**. 
 
-**Finding: 2,155 events** were generated with *mfaAuthenticated=false*. This high volume of non-MFA activity represents a critical vulnerability. Monitoring the mfaAuthenticated field enables the SOC to build alerts for high‑risk API activity without MFA, prioritise incident response on compromised keys, and drive enforcement of stronger authentication policies across cloud accounts [6]. 
+**Finding: 2,155 events** were generated with **mfaAuthenticated=false**. This high volume of non-MFA activity represents a critical vulnerability. Monitoring the mfaAuthenticated field enables the SOC to build alerts for high‑risk API activity without MFA, prioritise incident response on compromised keys, and drive enforcement of stronger authentication policies across cloud accounts [6]. 
 
 ```bash
 # Query: 
@@ -138,7 +138,7 @@ index=botsv3 sourcetype="aws:cloudtrail" eventName!="ConsoleLogin" | stats count
 
 **Objective:** Characterize the hardware profile of the web servers.
 
-**Analysis:** Using *sourcetype="hardware"*, I identified hosts named *gacrux*. To verify that the 'gacrux' endpoints identified in the hardware logs were indeed the web servers, I analysed the naming convention and cross-referenced the hostname with the *access_combined* sourcetype. This revealed that these hosts were generating Apache web logs. Furthermore, I observed high-frequency HTTP GET requests from the User-Agent *ELB-HealthChecker/2.0*. This specific traffic pattern confirms that these instances are registered targets behind an AWS Elastic Load Balancer [5], actively serving HTTP traffic.  
+**Analysis:** Using **sourcetype="hardware"**, I identified hosts named **gacrux**. To verify that the 'gacrux' endpoints identified in the hardware logs were indeed the web servers, I analysed the naming convention and cross-referenced the hostname with the *access_combined* sourcetype. This revealed that these hosts were generating Apache web logs. Furthermore, I observed high-frequency HTTP GET requests from the User-Agent **ELB-HealthChecker/2.0**. This specific traffic pattern confirms that these instances are registered targets behind an AWS Elastic Load Balancer [5], actively serving HTTP traffic.  
 
 **Finding:** I found the CPU_TYPE listed as **Intel Xeon CPU E5-2676 v3**. Mapping hardware profiles and hostnames to web‑facing services gives the SOC an accurate asset inventory, which is essential for scoping incidents, correlating web logs to specific servers, and spotting performance anomalies that may indicate attacks such as cryptojacking or DoS.
 
@@ -157,9 +157,9 @@ index=botsv3 sourcetype="access_combined" host="gacrux.i-0920036c8ca91e501" http
 
 **Objective:** Identify the specific API call that exposed data to the public.
 
-**Analysis:** I began by searching for *eventName='PutBucketAcl'*, which tracks changes to S3 bucket permissions. This returned two events. Instead of guessing, I analysed the 'Interesting Fields' sidebar to find parameters related to access control.
+**Analysis:** I began by searching for **eventName='PutBucketAcl'**, which tracks changes to S3 bucket permissions. This returned two events. Instead of guessing, I analysed the 'Interesting Fields' sidebar to find parameters related to access control.
 
-**Finding:**I discovered the field requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI. Checking the values for this field, I spotted http://acs.amazonaws.com/groups/global/AllUsers - this AWS identifier for public access. I added this to my search to confirm the single relevant event, pointing to Event ID **ab45689d-69cd-41e7-8705-5350402cf7ac**.
+**Finding:** I discovered the field requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI. Checking the values for this field, I spotted http://acs.amazonaws.com/groups/global/AllUsers - this AWS identifier for public access. I added this to my search to confirm the single relevant event, pointing to Event ID **ab45689d-69cd-41e7-8705-5350402cf7ac**.
 
 Detecting PutBucketAcl events that grant AllUsers access lets the SOC create real‑time detections for public S3 exposures and quickly contain misconfigurations before attackers can discover and exploit open buckets.
 
@@ -206,7 +206,7 @@ requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI="htt
 
 **Analysis:** I queried aws:s3:accesslogs for the .txt extension and PUT method to find successful uploads by external parties.
 
-**Finding:** A file named OPEN_BUCKET_PLEASE_FIX.txt was uploaded. The filename suggests a "Gray Hat" security researcher.  Confirming that external actors were able to write into the bucket proves that integrity was breached, which helps the SOC justify immediate containment, deeper threat hunting for potential payloads, and long‑term hardening of cloud storage controls.
+**Finding:** A file named **OPEN_BUCKET_PLEASE_FIX.txt** was uploaded. The filename suggests a "Gray Hat" security researcher.  Confirming that external actors were able to write into the bucket proves that integrity was breached, which helps the SOC justify immediate containment, deeper threat hunting for potential payloads, and long‑term hardening of cloud storage controls.
 
 ```bash
 # Query: 
@@ -222,9 +222,7 @@ Figure 16: Access logs confirming the upload of the text file.
 
 **Analysis:** Using sourcetype="WinHostMon", I grouped hosts by OS version. However, the standard host field only provided the short hostname, leaving the domain uncertain. To resolve this, I performed some investigative digging through the raw log entries for BSTOLL-L.
 
-**Finding:** The ComputerName field reveals the full path BSTOLL-L.froth.ly; unlike most hosts running Windows 10 Pro, this endpoint runs Windows 10 Enterprise, indicating an administrator workstation linked to the same user and timeframe as the risky cloud activity. This makes it a likely pivot point for an attacker and immediately relevant to SOC triage and endpoint forensics.​
-
-**Significance:** Enterprise builds are typically reserved for admins, so an admin machine used by bstoll—who lacks MFA and exposed the frothlywebcode bucket—must be treated as a high‑value asset and priority for containment. If compromised, BSTOLL-L.froth.ly could hold credentials enabling lateral movement (MITRE T1021) [4] across the domain, escalating the breach from a cloud misconfiguration to a full domain compromise.
+**Finding:** The ComputerName field reveals the full path BSTOLL-L.froth.ly; unlike most hosts running Windows 10 Pro, this endpoint runs Windows 10 Enterprise, indicating an administrator workstation linked to the same user and timeframe as the risky cloud activity. This makes it a high-value assest and priority for SOC containment. If compromised, BSTOLL-L.froth.ly could hold credentials enabling lateral movement (MITRE T1021) [4] across the domain, escalating the breach from a cloud misconfiguration to a full domain compromise.
 
 ```bash
 # Query: 
