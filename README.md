@@ -193,9 +193,7 @@ requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI="htt
 
 **Analysis:** The requestParameters field in the log entry specified the target bucket.
 
-**Finding:** The bucket name is frothlywebcode. Identifying the exact bucket and data type that were exposed allows the SOC to estimate business impact, prioritise remediation, and coordinate with risk and compliance teams on potential data‑loss and regulatory obligations.
-
-**Risk Assessment:** The name implies this bucket contains source code. Exposure of source code often leads to the discovery of hardcoded API keys or intellectual property theft. This behavior maps to **MITRE ATT&CK T1530** (Data from Cloud Storage) [3], where adversaries access data from unsecured cloud buckets.
+**Finding:** The bucket name is **frothlywebcode** which implies source code exposure, risking API keys or IP theft (**MITRE ATT&CK T1530** [3]). The identification allows the SOC to estimate business impact and prioritise remediation.
 
 ![Figure 15](Images/Question6.png)
 *Figure 15: Target resource identification confirming the bucket 'frothlywebcode'.*
