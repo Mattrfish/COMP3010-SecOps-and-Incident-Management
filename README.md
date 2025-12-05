@@ -66,7 +66,7 @@ This investigation follows the **NIST SP 800-61** Incident Response Lifecycle [2
 
 ### 3.1 Splunk Installation 
 
-A local instance of Splunk Enterprise was deployed on an Ubuntu Virtual Machine. The installer was extracted to `/opt`, adhering to Linux best practices for unbundled software.
+A local Splunk Enterprise instance was deployed on an Ubuntu virtual machine to mimic how a SOC would typically host a centralised SIEM in a controlled environment. The VM approach isolates the BOTSv3 lab from production resources while still allowing realistic log volume and query performance. Splunk was installed under /opt to follow Linux best practice for third‑party software and keep application files separate from the OS.
 
 ```bash
 # Commands used for installation
@@ -80,7 +80,7 @@ sudo /opt/splunk/bin/splunk start --accept-license
 
 ### 3.2 Dataset Ingestion
 
-The BOTSv3 dataset was retrieved from the official Splunk GitHub repository and ingested as a standalone Splunk App. Segregating this data into a specific index (botsv3) ensures efficient query performance and prevents data pollution of the main index.
+The BOTSv3 dataset was downloaded from the official Splunk GitHub repository and installed as a dedicated app, with all events indexed into a separate botsv3 index. This separation prevents test data from polluting the default index and allows focused searches using index=botsv3 across multiple sourcetypes such as aws:cloudtrail, aws:s3:accesslogs, WinHostMon, hardware and access_combined. Basic validation was performed by checking index event counts, confirming that expected sourcetypes were present, and running sample searches to ensure CloudTrail, S3 and endpoint logs were ingested correctly before starting the investigation.
 
 ![Figure 2](Images/BOTSv3Github.png)
 *Figure 2: BOTSv3 dataset being retrieved from the Git repository.*
@@ -111,7 +111,7 @@ index=botsv3 sourcetype="aws:cloudtrail" userIdentity.type="IAMUser"
 | stats values(eventSource) by “Services Accessed” by userIdentity.userName 
 ```
 
-**Finding:** The users *bstoll,btun,splunk_access,and web_admin* were identified accessing AWS services. Monitoring this list is critical for detecting dormant accounts that suddenly become active. Specifically, the presence of generic accounts like web_admin performing actions is a security risk, as it obscures individual accountability.
+**Finding:** The users *bstoll,btun,splunk_access,and web_admin* were identified accessing AWS services. Monitoring this list is critical for detecting dormant accounts that suddenly become active. Specifically, the presence of generic accounts like *web_admin* performing actions is a security risk, as it obscures individual accountability.
 
 ![Figure 6](Images/Question1.png)
 Figure 6: Statistical table of IAM users and the specific AWS services they accessed.
@@ -249,37 +249,21 @@ index=botsv3 host="BSTOLL-L" computername
 
 The investigation confirms that a preventable cloud misconfiguration, executed by the user bstoll from the high‑privilege endpoint BSTOLL-L.froth.ly, exposed the frothlywebcode S3 bucket to the public internet and allowed at least one external write operation. This occurred in an environment where MFA was not enforced for API activity and no automated control prevented or rolled back risky ACL changes, significantly increasing the likelihood and impact of credential theft and data exposure.
 
-From a SOC perspective, the case illustrates how Tier 1 monitoring of CloudTrail anomalies must be supported by Tier 2 correlation across cloud, S3, and endpoint logs, and by Tier 3 threat hunting for similar misconfigurations and lateral movement opportunities. Key lessons learned are the need for default‑deny S3 policies, mandatory MFA on all privileged access paths, and explicit monitoring of administrator endpoints that deviate from the standard build.
+From a SOC point of view, the case highlights the need to link Tier 1 CloudTrail monitoring with Tier 2 correlation across cloud, S3 and endpoint logs, and Tier 3 hunting for similar misconfigurations and lateral movement paths. Key lessons are to default‑deny S3 access, enforce MFA on all privileged API usage, and treat administrator endpoints such as BSTOLL-L.froth.ly as high‑value assets needing additional monitoring and control.
 
-### 5.1 Root Cause Analysis
+### 5.1 Immediate containment (0–24 hours)
+* Block public access on frothlywebcode and verify no other buckets grant *AllUsers/AuthenticatedUsers* ACLs.
+* Rotate credentials for bstoll and related IAM roles, and remove unapproved uploads such as *OPEN_BUCKET_PLEASE_FIX.txt* after preserving evidence.
 
-* **Primary Cause:** Human error (misconfiguration of S3 ACLs).
+### 5.2 Short‑term recovery (next 1–2 weeks)
+* Enforce an IAM condition that denies API actions unless *aws:MultiFactorAuthPresent* is true for all human users and high‑risk roles.
+* Isolate *BSTOLL-L.froth.ly* for full forensic analysis, including malware scanning, credential dump checks, and review of administrative tool usage.
+* Develop and deploy Splunk correlation rules that alert on *PutBucketAcl* granting public access, high‑volume non‑MFA API activity, and changes originating from privileged endpoints.
 
-* **Contributing Factor:** Lack of technical guardrails (MFA was not enforced for API calls).
-
-* **Contributing Factor:** Lack of automated remediation (No CSPM tool blocked the public access change).
-
-### 5.2 Business Impact
-
-* **Data Loss Prevention (DLP):** The exposure of "webcode" puts the organization at risk of Intellectual Property theft.
-
-* **Reputation:** Publicly writable buckets allow attackers to host malware on Frothly's domain, leading to domain blacklisting.
-
-### 5.3 Remediation Action Plan (Lessons Learned)
-
-**Immediate Containment (0-24 hours)**
-* **Revoke Access:** Apply “Block Public Access” controls to frothlywebcode and verify that no other buckets grant AllUsers or AuthenticatedUsers ACLs.
-* **Credential Rotation:** Force a password reset and rotate passwords and access keys for bstoll and any shared IAM roles used from BSTOLL-L.froth.ly, and revoke unused credentials
-* **Sanitize Storage:** Triage S3 access logs for the exposure window, remove unapproved uploads such as OPENBUCKETPLEASEFIX.txt, and preserve artefacts for legal and compliance review.​
-
-**Short-Term Recovery (next 1-2 weeks**
-* **Enforce MFA:** Implement an IAM policy denying all actions unless *aws:MultiFactorAuthPresent* is true. This directly addresses the vulnerability found in Section 4.2.
-* **Endpoint Isolation:** Isolate BSTOLL-L.froth.ly for full forensic analysis, including malware scanning, credential dump checks, and review of administrative tool usage.
-
-**Long-Term SOC improvements (1-3 months)**
-* **Implement CSPM:** Implement a Cloud Security Posture Management (CSPM) capability (for example via AWS Config or equivalent) to continuously detect and auto‑remediate public S3 buckets and other high‑risk misconfigurations.
-* **Least Privilege Review:** Conduct a least‑privilege review of IAM users and roles, ensuring developers cannot modify global ACLs without change control and dual authorisation.
-* **Training and Awareness:** Integrate scenarios like this BOTSv3 incident into SOC runbooks and training so Tier 1–3 analysts can rapidly recognise similar patterns and execute coordinated response and recovery.
+### 5.3 Long‑term SOC improvements (1–3 months)
+* Implement a Cloud Security Posture Management (CSPM) capability (for example via AWS Config or equivalent) to continuously detect and auto‑remediate public S3 buckets and other high‑risk misconfigurations.
+* Conduct a least‑privilege review of IAM users and roles, ensuring developers cannot modify global ACLs without change control and dual authorisation.
+* Integrate scenarios like this BOTSv3 incident into SOC runbooks and training so Tier 1–3 analysts can rapidly recognise similar patterns and execute coordinated response and recovery.
 
 ---
 
