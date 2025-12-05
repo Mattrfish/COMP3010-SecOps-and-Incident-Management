@@ -1,42 +1,72 @@
-# BOTSv3 Incident Analysis 
-
-## Introduction
-
-Security Operations Centers (SOC) are essential for 24/7 threat detection. SOC teams rely on SIEM (Security Information and Event Management) systems like Splunk to collect and analyse logs, spotting suspicious activity that human analysis might miss.
-
-The BOTSv3 (Boss of the SOC version 3) exercise simulates this environment through "Capture the Flag" tasks targeting the digital infrastructure of "Frothly”, a fictional brewery. This dataset gathers logs from various services, including Amazon AWS, Microsoft Azure, and internal endpoints.
-
-The objective is to complete the “200-level” questions using Splunk Search Processing Language (SPL), focussing on AWS cloud infrastructure events (IAM access, S3 misconfigurations) and endpoint hardware analysis. This report uses the Cyber Kill Chain methodology to reconstruct the incident based on the provided log data.
+# Incident Report: Unauthorized Cloud Infrastructure Access & Endpoint Anomalies
+**Project:** BOTSv3 Incident Analysis (COMP3010)  
+**Author:** Matthew Fish  
+**Date:** 05 December 2025  
+**Reporting Authority:** Chief Information Security Officer (CISO), Frothly Security Operations Center  
+**Classification:** INTERNAL / CONFIDENTIAL
 
 ---
 
-## SOC Roles & Incident Handling Reflection
-
-A professional SOC is tiered to manage alerts efficiently  [1]. 
-
-* **Level 1 Analysts:** Responsible for reviewing SIEM alerts to identify if they are false positives or genuine threats. 
-* **Level 2 Analysts:** Handle escalated, high-priority incidents requiring deep investigation. 
-* **Level 3 Analysts:** These are highly experienced analysts who search for threat indications (threat hunting), while the **SOC Manager** oversees operations and reports to the CISO. 
-
-Additional roles include security engineers who are responsible for implementing security solutions and malware analysts who reverse engineer malware to improve security detection.
-
-In this exercise, I simulate a Level 2/3 analyst. Rather than reacting to alerts, I utilize Splunk SPL to proactively search for Indicators of Compromise (IOCs). This analysis follows the NIST Incident Response Lifecycle [2]: 
-
-1. **Prevention:** The incident stems from a failure in the Prevention phase, specifically due to Frothly's misconfigured AWS cloud permissions and inadequate access controls.
-2. **Detection and Analysis:** This is the primary focus of the exercise. It involves interrogating Splunk logs to distinguish between benign network noise and genuine threats, confirming the scope of the breach.
-3. **Response:** The analysis provides the details of the incident so that threats can be contained and eradicated at this stage. 
-4. **Recovery:** This stage focusses on "lessons learned". By defining the root cause, patches can be implemented to ensure these specific vulnerabilities are not re-exploited. 
+## Table of Contents
+1. [Introduction](#1-introduction)
+2. [SOC Roles & Incident Handling Methodology](#2-soc-roles--incident-handling-methodology)
+3. [Environment Setup & Data Ingestion](#3-environment-setup--data-ingestion)
+4. [Incident Investigation (Guided Analysis)](#4-incident-investigation-guided-analysis)
+    * [4.1 IAM Account Auditing](#41-iam-account-auditing-question-1)
+    * [4.2 MFA Compliance Check](#42-mfa-compliance-check-question-2)
+    * [4.3 Web Server Asset Identification](#43-web-server-asset-identification-question-3)
+    * [4.4 S3 Bucket Permissions Analysis](#44-s3-bucket-permissions-analysis-question-4)
+    * [4.5 Attribution of Actions](#45-attribution-of-actions-question-5)
+    * [4.6 Data Exposure Scope](#46-data-exposure-scope-question-6)
+    * [4.7 Unauthorized Artifact Upload](#47-unauthorized-artifact-upload-question-7)
+    * [4.8 Endpoint Anomalies](#48-endpoint-anomalies-question-8)
+5. [Conclusion & Strategic Recommendations](#5-conclusion--strategic-recommendations)
+6. [References](#6-references)
+7. [Appendix A: Video Presentation](#7-appendix-a-video-presentation)
+8. [Appendix B: AI Declaration](#8-appendix-b-ai-declaration)
 
 ---
 
-## Installation & Data Preparation
+## 1. Introduction 
+
+This report presents a forensic investigation into security anomalies within Frothly’s cloud and endpoint infrastructure using the BOTSv3 dataset in Splunk. The scope is limited to AWS CloudTrail, S3 access logs, and Windows endpoint telemetry, with a focus on identifying misconfigurations and behaviours consistent with insider misuse or credential compromise. The primary audience is the Chief Information Security Officer (CISO) and security management team, and the report is written as an internal incident record to inform SOC process improvements.
+
+​BOTSv3 simulates a production environment in which Frothly hosts web workloads on AWS, stores application code in S3, and joins endpoints to the froth.ly domain. Within this context, the investigation aims to:
+
+* ​Identify IAM users and endpoints involved in risky or anomalous activity.
+
+* Determine how an S3 bucket became publicly accessible and whether it was abused.
+
+* Assess the impact of missing MFA controls and endpoint configuration drift on overall SOC risk.
+
+The report is structured as follows: Section 2 links the investigation to SOC tiers and the NIST incident lifecycle; Section 3 documents Splunk setup and dataset ingestion; Section 4 provides guided analysis answering the BOTSv3 question set; Section 5 consolidates conclusions and presents a prioritised action plan. 
+
+---
+
+## 2. SOC Roles & Incident Handling Methodology 
+
+Security Operations Centers (SOC) rely on a tiered structure to manage alert fatigue and ensure critical threats are escalated appropriately [1]. 
+* **Tier 1 Analysts (Triage):** Monitor SIEM alerts (e.g., Splunk) to distinguish false positives from genuine security events. 
+* **Tier 2 Analysts (Incident Responders):** This investigation assumes the role of a Tier 2 analyst. The focus is not merely viewing alerts, but correlating data across multiple sourcetypes (AWS, Endpoint, Network) to reconstruct the attack timeline. 
+* **Tier 3 Analysts (Threat Hunters):** Proactively search for threats that evade automated detection rules. 
+
+### Application of the NIST Cycle 
+
+This investigation follows the **NIST SP 800-61** Incident Response Lifecycle [2]: 
+1. **Preparation:** The environment was prepared by ingesting BOTSv3 data into a localized Splunk instance (See Section 3). 
+2. **Detection & Analysis:** Utilizing Splunk Search Processing Language (SPL) to query *aws:cloudtrail* and *hardware* logs to identify the scope of the breach. 
+3. **Containment, Eradication & Recovery:** (Detailed in Section 5) Proposing immediate revocation of public S3 access and credential rotation. 
+4. **Post-Incident Activity:** Documenting the "Lessons Learned" to prevent recurrence through stricter IAM policies.
+
+---
+
+## 3. Installation & Data Preparation
 
 ### Environment Setup
 
-A localized Splunk Enterprise instance was deployed on an Ubuntu Virtual Machine, mirroring a standard SOC analyst sandbox, allowing for safe log analysis without impacting production servers.
+### 3.1 Splunk Installation 
 
-1. Splunk Installation:
-The Splunk Enterprise installer (.tgz) was retrieved and extracted to the /opt directory. This directory is the industry-standard location for unbundled software on Linux systems, ensuring that the security tools remain separate from the core operating system files.
+A local instance of Splunk Enterprise was deployed on an Ubuntu Virtual Machine. The installer was extracted to `/opt`, adhering to Linux best practices for unbundled software.
 
 ```bash
 # Commands used for installation
@@ -45,74 +75,74 @@ sudo tar -xvzf splunk-*.tgz -C /opt
 sudo /opt/splunk/bin/splunk start --accept-license
 ```
 
-2. Service Initialization:
-The service was started on localhost:8000.
+![Figure 1](Images/SplunkServer.png)
+*Figure 1: Verification of Splunk services running on localhost.*
 
-![](Images/SplunkServer.png)
+### 3.2 Dataset Ingestion
 
-### Dataset Ingestion
+The BOTSv3 dataset was retrieved from the official Splunk GitHub repository and ingested as a standalone Splunk App. Segregating this data into a specific index (botsv3) ensures efficient query performance and prevents data pollution of the main index.
 
-The BOTSv3 dataset was retrieved from the official Splunk GitHub repository. Proper data ingestion is critical in a SOC to ensure time-stamps are parsed correctly and logs are searchable.
-
-1. Retrieving Data:
-The dataset was downloaded and extracted. In a real-world SOC, data is usually ingested via Forwarders, but for this simulation, the data was uploaded directly as a Splunk App.
-
-![](Images/BOTSv3Github.png)
-![](Images/BOTSv3DataSet.png)
-
-2.Indexing & App Configuration:
-The extracted data folder was moved to the Splunk apps directory. This ensures that all the specific field extractions and sourcetypes for the BOTSv3 data are automatically applied when Splunk restarts.
+![Figure 2](Images/BOTSv3Github.png)
+*Figure 2: BOTSv3 dataset being retrieved from the Git repository.*
+![Figure 3](Images/BOTSv3DataSet.png)
+*Figure 3: The extracted dataset directory.*
 
 ```bash
-# Command used to install the BOTSv3 App
 cp -r botsv3_data_set /opt/splunk/etc/apps/
 ```
-![](Images/BOTSv3AppsInstall.png)
-
-Segregating this data into its own index is best practice.
-
-![](Images/BOTSv3Index.png)
+![4](Images/BOTSv3AppsInstall.png)
+*Figure 4: Dataset ingested as an app.*
+![5](Images/BOTSv3Index.png)
+*Figure 5: Confirmation of indexed events within the BOTSv3 dataset.*
 
 ---
 
-## Guided Questions
+## 4. Incident Investigation (Guided Analysis)
 
-### Question 1: IAM Users Accessing Services
+### 4.1 IAM Account Auditing (Question 1)
 
-By analysing AWS CloudTrail logs (userIdentity.type='IAMUser'), I isolated specific user actions from automated services. Using the stats command to group eventSource by userName revealed the users **bstoll,btun,splunk_access,web_admin** were accessing services.
+**Objective:** Identify all IAM users accessing AWS services to audit for Least Privilege violations.
 
-Monitoring this is fundamental to cloud security; by auditing which users access specific services, analysts can detect violations of least privilege and identify anomalous behaviour that signals compromised accounts. 
+**Analysis:** Querying ``aws:cloudtrail`` for ``userIdentity.type="IAMUser"`` allows us to isolate human actors from automated service roles. The ``stats`` command grouped these by username.
 
 ```bash 
 # Query: 
 index=botsv3 sourcetype="aws:cloudtrail" userIdentity.type="IAMUser"
 | stats values(eventSource) by “Services Accessed” by userIdentity.userName 
-
 ```
 
-![Question1](Images/Question1.png)
+**Finding:** The users *bstoll,btun,splunk_access,and web_admin* were identified accessing AWS services. Monitoring this list is critical for detecting dormant accounts that suddenly become active. Specifically, the presence of generic accounts like web_admin performing actions is a security risk, as it obscures individual accountability.
 
-### Question 2: Missing MFA Field
+![Figure 6](Images/Question1.png)
+Figure 6: Statistical table of IAM users and the specific AWS services they accessed.
 
-To identify AWS API activity occurring without Multi-Factor Authentication (MFA), I performed a keyword search using *mfa* against the aws:cloudtrail sourcetype. I explicitly excluded ConsoleLogin events to isolate programmatic API calls from web interface logins. This revealed the nested JSON path **userIdentity.sessionContext.attributes.mfaAuthenticated**. To verify, I ran a stats count on this field, which returned 2,155 instances where the value was false.
+### 4.2 MFA Compliance Check (Question 2)
 
-MFA is a critical layer of security. SOC analysts need to monitor MFA for bypasses, credential compromises, and insider abuse, which could look like admins performing sensitive actions, which MFA cannot prevent on its own. This high volume of non-MFA activity represents a critical risk, as compromised credentials would grant an attacker full access without the secondary barrier of MFA.
+**Objective:** Detect AWS API activity performed without Multi-Factor Authentication (MFA).
+
+**Analysis:** To identify AWS API activity occurring without MFA, I performed a keyword search using *mfa* against the *aws:cloudtrail* sourcetype. I explicitly excluded ConsoleLogin events to isolate programmatic API calls from web interface logins. This revealed the nested JSON path **userIdentity.sessionContext.attributes.mfaAuthenticated**. 
+
+**Finding: 2,155 events** were generated with *mfaAuthenticated=false*. This high volume of non-MFA activity represents a critical vulnerability. If an attacker compromises a key (like *bstoll*'s), they have unimpeded access to the cloud environment.
+
+MFA is a critical layer of security. SOC analysts need to monitor MFA for bypasses, credential compromises, and insider abuse. Programmatic access (API Keys) lacking MFA is often the primary vector for automated attacks; unlike a console login which requires human interaction, a compromised API key without MFA allows scripts to exfiltrate data at machine speed.
 
 ```bash
 # Query: 
 index=botsv3 sourcetype="aws:cloudtrail" eventName!="ConsoleLogin" | stats count by userIdentity.sessionContext.attributes.mfaAuthenticated 
 ```
 
-![Question2.0](Images/Question2.0.png)
-![Question2.1](Images/Question2.1.png)
+![Figure 7](Images/Question2.0.png)
+*Figure 8: The nested JSON path identifying MFA status.*
+![Figure 8](Images/Question2.1.png)
+*Figure 8: Count of events where MFA authentication was absent.*
 
-### Question 3: Web Server Processor
+### Web Server Asset Identification (Question 3)
 
-I browsed the Sourcetype field list and identified a relevant sourcetype named hardware. Filtering for sourcetype="hardware" returned three events for hosts named gacrux. 
+**Objective:** Characterize the hardware profile of the web servers.
 
-To verify that the 'gacrux' endpoints identified in the hardware logs were indeed the web servers, I analysed the naming convention and cross-referenced the hostname with the access_combined sourcetype. This revealed that these hosts were generating Apache web logs. Furthermore, I observed high-frequency HTTP GET requests from the User-Agent 'ELB-HealthChecker/2.0'. This specific traffic pattern confirms that these instances are registered targets behind an AWS Elastic Load Balancer, actively serving HTTP traffic.
+**Analysis:** Using *sourcetype="hardware"*, I identified hosts named *gacrux*. To verify that the 'gacrux' endpoints identified in the hardware logs were indeed the web servers, I analysed the naming convention and cross-referenced the hostname with the *access_combined* sourcetype. This revealed that these hosts were generating Apache web logs. Furthermore, I observed high-frequency HTTP GET requests from the User-Agent *ELB-HealthChecker/2.0*. This specific traffic pattern confirms that these instances are registered targets behind an AWS Elastic Load Balancer [5], actively serving HTTP traffic.  
 
-Returning to the hardware logs for gacrux, I found the CPU_TYPE listed as **Intel Xeon CPU E5-2676 v3**.
+**Finding:** I found the CPU_TYPE listed as **Intel Xeon CPU E5-2676 v3**.
 
 An accurate Asset Inventory is a foundational SOC requirement. Understanding hardware allows analysts to distinguish between legitimate resource usage and malicious activity. For example, if a web server known to run high-performance CPUs suddenly experiences 100% utilization during low-traffic periods, it is a strong indicator of Cryptojacking (unauthorized crypto-mining) or a Denial of Service (DoS) attack.
 
@@ -122,14 +152,18 @@ index=botsv3 sourcetype=”hardware”
 index=botsv3 sourcetype="access_combined" host="gacrux.i-0920036c8ca91e501" http*
 ```
 
-![Question3](Images/Question3.png)
-![Question3.1](Images/Question3.1.png)
+![Figure 9](Images/Question3.png)
+*Figure 9: List of different web servers*
+![Figure 10](Images/Question3.1.png)
+*Figure 10: Hardware log analysis identifying the CPU type.*
 
-### Question 4: S3 Public Access Event ID
+### 4.4 S3 Bucket Permissions Analysis (Question 4)
 
-To identify the specific API call from Bud that enabled public access, I began by searching for eventName='PutBucketAcl', which tracks changes to S3 bucket permissions. This returned two events. Instead of guessing, I analysed the 'Interesting Fields' sidebar to find parameters related to access control.
+**Objective:** Identify the specific API call that exposed data to the public.
 
-I discovered the field requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI. Checking the values for this field, I spotted http://acs.amazonaws.com/groups/global/AllUsers - this AWS identifier for public access. I added this to my search to confirm the single relevant event, pointing to Event ID **ab45689d-69cd-41e7-8705-5350402cf7ac**.
+**Analysis:** I began by searching for *eventName='PutBucketAcl'*, which tracks changes to S3 bucket permissions. This returned two events. Instead of guessing, I analysed the 'Interesting Fields' sidebar to find parameters related to access control.
+
+**Finding:**I discovered the field requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI. Checking the values for this field, I spotted http://acs.amazonaws.com/groups/global/AllUsers - this AWS identifier for public access. I added this to my search to confirm the single relevant event, pointing to Event ID **ab45689d-69cd-41e7-8705-5350402cf7ac**.
 
 Misconfigured S3 buckets are a leading cause of data breaches. SOC analysts must set up real-time alerts for PutBucketAcl events that grant "AllUsers" access. Rapid detection allows the SOC to revoke public access before sensitive data is exfiltrated by scanners or bots. 
 
@@ -139,53 +173,64 @@ index=botsv3 sourcetype="aws:cloudtrail" eventName="PutBucketAcl"
 requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI="http://acs.amazonaws.com/groups/global/AllUsers" 
 ```
 
-![Question4.0](Images/Question4.0.png)
-![Question4.1](Images/Question4.1.png)
-![Question4.2](Images/Question4.2.png)
+![Figure 11](Images/Question4.0.png)
+*Figure 11: The SPL query for S3 buckets*
+![Figure 12](Images/Question4.1.png)
+*Figure 12: The fields sidebar showing the ACL URI JSON Path*
+![Figure 13](Images/Question4.2.png)
+*Figure 13: JSON payload identifying the specific Event ID granting 'AllUsers' access.*
 
-### Question 5: Bud's Username
+### 4.5 Attribution of Actions (Question 5)
 
-Continuing the analysis of the JSON payload from the event identified in Question 4, I inspected the userIdentity object. This explicitly listed the userName of the actor who performed the action (setting the bucket to "AllUsers" access) as bstoll.
-Further examination of the bucket to reveal the account that has set the bucket to public access, allows analysts to pivot back to IAM logs (as seen in question 1) to determine if the user bstoll is a malicious insider or a victim of credential theft.
+**Objective:** Determine the actor responsible for the configuration change.
 
-![Question5](Images/Question5.png)
+**Analysis:** Examining the userIdentity object within the Event ID identified in Section 4.4.
 
-### Question 6: Compromised S3 Bucket Name
+**Finding:** The user **bstoll** (Bud) executed the command. This allows the SOC to pivot the investigation: is Bud a malicious insider, or were his non-MFA credentials (identified in Section 4.2) compromised?
 
-Within the same PutBucketAcl event found in Question 4, I expanded the requestParameters section of the JSON. This identified the specific target resource, revealing the bucket name as frothlywebcode.
+![Figure 14](Images/Question5.png)
+*Figure 14: Attribution of the 'PutBucketAcl' event to user 'bstoll'.*
 
-The bucket name is a useful indicator for the SOC to understand the sensitivity of the data. Frothlywebcode implies source code, whereas a bucket named frothly-payroll would imply PII. Knowing this allows analysts to searched dark web forums to see if the exposed URL is being shared by attackers. 
+### 4.6 Data Exposure Scope (Question 6)
 
-![Question6](Images/Question6.png)
+**Objective:** Identify the exposed resource.
 
-### Question 7: Uploaded Text File
+**Analysis:** The requestParameters field in the log entry specified the target bucket.
 
-To locate the uploaded text file, I filtered for the sourcetype aws:s3:accesslogs and narrowed the search by filtering for the .txt file extension. This reduced the noise to just three events. To identify the specific file upload, I filtered for the PUT method (indicating a write operation). This isolated a single successful event, revealing the filename in the key field: OPEN_BUCKET_PLEASE_FIX.txt.
+**Finding:** The bucket name is frothlywebcode.
 
-I tried to investigate further and work out who uploaded the file to the bucket, however there was no endpoint device or IAM user that the upload was mapped to. 
+**Risk Assessment:** The name implies this bucket contains source code. Exposure of source code often leads to the discovery of hardcoded API keys or intellectual property theft. This behavior maps to **MITRE ATT&CK T1530** (Data from Cloud Storage) [3], where adversaries access data from unsecured cloud buckets.
 
-Analysing access logs for public buckets helps the SOC determine the impact of a breach. The specific use of the PUT method confirms the bucket was writable by the public. This triggers an immediate incident response workflow to scan the entire bucket for other uploaded artifacts, such as webshells, ransomware notes, or illegal content.
+![Figure 15](Images/Question6.png)
+*Figure 15: Target resource identification confirming the bucket 'frothlywebcode'.*
 
-If this bucket serves assets for a website (e.g., images or JavaScript), an attacker could overwrite legitimate files to launch Cross-Site Scripting (XSS) attacks against customers.
+### 4.7 Unauthorized Artifact Upload (Question 7)
 
-In this case, the specific filename indicates a "Gray Hat" actor scanning for vulnerabilities. However, a SOC must still treat this as a full breach, as the "open door" allowed anyone to enter. The SOC must validate that no other actors utilized the same vulnerability window to exfiltrate data (GET requests) or upload malware before the researcher arrived.
+**Objective:** Confirm if the exposure was exploited.
+
+**Analysis:** I queried aws:s3:accesslogs for the .txt extension and PUT method to find successful uploads by external parties.
+
+**Finding:** A file named OPEN_BUCKET_PLEASE_FIX.txt was uploaded.
+
+**Damage Assessment:** The filename suggests a "Gray Hat" security researcher. However, the fact that a write operation was possible confirms that integrity has been lost. If a researcher could upload a text file, a malicious actor could have utilized this same open door to upload webshells, ransomware payloads, or command-and-control scripts.
 
 ```bash
 # Query: 
 index=botsv3 sourcetype="aws:s3:accesslogs" .txt PUT 
 ```
 
-![Question7](Images/Question7.png)
+![Figure 16](Images/Question7.png)
+Figure 16: Access logs confirming the upload of the text file.
 
-### Question 8: FQDN of Unique Endpoint
+### 4.8 Endpoint Anomalies (Question 8)
 
-To find the FQDN of the endpoint running a unique operating system, I used the sourcetype winhostmon. I then grouped the results by host and operating system, which revealed 8 different hosts. While the others were running Microsoft Windows 10 Pro, I identified one outlier running a different OS: BSTOLL-L, which uses Microsoft Windows 10 Enterprise. 
+**Objective:** Detect configuration drift in endpoints.
 
-However, the standard host field only provided the short hostname, leaving the domain uncertain. To resolve this, I performed some investigative digging through the raw log entries for BSTOLL-L. After scanning through the event details, I located the ComputerName field, which explicitly listed the full network path as BSTOLL-L.froth.ly.
+**Analysis:** Using sourcetype="WinHostMon", I grouped hosts by OS version. However, the standard host field only provided the short hostname, leaving the domain uncertain. To resolve this, I performed some investigative digging through the raw log entries for BSTOLL-L
 
-Identifying outliers in asset configurations is key to detecting high-risk assets. Personal laptops connected to the corporate network often lack standard security controls (patching/EDR), creating a soft entry point for attackers. 
+**Finding:** After scanning through the event details, I located the ComputerName field, which explicitly listed the full network path as BSTOLL-L.froth.ly. While most hosts run Windows 10 Pro, the endpoint BSTOLL-L.froth.ly is running Microsoft Windows 10 Enterprise. 
 
-The "Enterprise" edition on a laptop typically implies an Administrative or Developer machine. These endpoints are high-priority targets for attackers because they often contain hardcoded credentials or direct access to production environments.
+**Significance:** Enterprise editions are typically reserved for administrators. The combination of an Admin machine (BSTOLL-L), used by a user (bstoll) who fails to use MFA (Section 4.2), and who recently exposed sensitive cloud data (Section 4.4), marks this endpoint as the priority target for containment. If this endpoint is compromised, it likely holds cached credentials that could facilitate Lateral Movement (MITRE T1021) [4] across the internal network, escalating the breach from a cloud misconfiguration to a full domain compromise.
 
 ```bash
 # Query: 
@@ -193,36 +238,64 @@ index=botsv3 sourcetype="WinHostMon" | stats count by host, OS Version
 index=botsv3 host="BSTOLL-L" computername
 ```
 
-![Question8](Images/Question8.png)
-![Question8.1](Images/Question8.1.png)
+![Figure 17](Images/Question8.png)
+*Figure 17: OS Version comparison identifying the outlier endpoint.*
+![Figure 18](Images/Question8.1.png)
+*Figure 18: The full bstoll computername.*
 
 ---
 
-## Conclusion and Recommendations
+## 5. Conclusion & Strategic Recommendations
 
-The investigation successfully reconstructed the incident timeline using Splunk logs.  It was determined that the user bstoll (Bud), operating from the endpoint BSTOLL-L, modified the AWS environment configuration. This change resulted in the S3 bucket frothlywebcode being set to "All Users," granting full public access. This exposure was detected and exploited by an unidentified external actor who uploaded a file named OPEN_BUCKET_PLEASE_FIX.txt.
+The investigation confirms that a preventable cloud misconfiguration, executed by the user bstoll from the high‑privilege endpoint BSTOLL-L.froth.ly, exposed the frothlywebcode S3 bucket to the public internet and allowed at least one external write operation. This occurred in an environment where MFA was not enforced for API activity and no automated control prevented or rolled back risky ACL changes, significantly increasing the likelihood and impact of credential theft and data exposure.
 
-While the nature of the uploaded file indicates a "Gray Hat" warning rather than a malicious attack, this vulnerability represents a critical failure. A malicious actor could have utilized this same access for data exfiltration, ransomware injection, or code corruption.
+From a SOC perspective, the case illustrates how Tier 1 monitoring of CloudTrail anomalies must be supported by Tier 2 correlation across cloud, S3, and endpoint logs, and by Tier 3 threat hunting for similar misconfigurations and lateral movement opportunities. Key lessons learned are the need for default‑deny S3 policies, mandatory MFA on all privileged access paths, and explicit monitoring of administrator endpoints that deviate from the standard build.
 
-The investigation highlighted a significant lack of security controls. The account bstoll demonstrated a failure to enforce Multi-Factor Authentication (MFA). Had MFA been active, it would have served as a secondary barrier even if credentials were compromised. Furthermore, the endpoint BSTOLL-L is running Windows 10 Enterprise; this suggests the user holds a high-privilege role (such as an Administrator or Developer), making the lack of security controls on this account a high-risk vulnerability.
+### 5.1 Root Cause Analysis
 
-To remediate this incident and prevent reoccurrence, the following actions are recommended:
-* Immediate Containment: Revoke public access to the frothlywebcode bucket immediately and perform a full audit of the bucket contents to ensure no other malicious artifacts (e.g., webshells) were uploaded.
-* Credential Rotation: Reset the credentials for user bstoll immediately, treating the account as compromised.
-* Enforce MFA: Implement a strict policy requiring MFA for all IAM users, specifically enforcing it for API and CLI access, not just console logins.
-* Least Privilege Review: Conduct an audit of all IAM roles to ensure users like bstoll possess only the permissions necessary for their operational duties.
+* **Primary Cause:** Human error (misconfiguration of S3 ACLs).
+
+* **Contributing Factor:** Lack of technical guardrails (MFA was not enforced for API calls).
+
+* **Contributing Factor:** Lack of automated remediation (No CSPM tool blocked the public access change).
+
+### 5.2 Business Impact
+
+* **Data Loss Prevention (DLP):** The exposure of "webcode" puts the organization at risk of Intellectual Property theft.
+
+* **Reputation:** Publicly writable buckets allow attackers to host malware on Frothly's domain, leading to domain blacklisting.
+
+### 5.3 Remediation Action Plan (Lessons Learned)
+
+**Immediate Containment (0-24 hours)**
+* **Revoke Access:** Apply “Block Public Access” controls to frothlywebcode and verify that no other buckets grant AllUsers or AuthenticatedUsers ACLs.
+* **Credential Rotation:** Force a password reset and rotate passwords and access keys for bstoll and any shared IAM roles used from BSTOLL-L.froth.ly, and revoke unused credentials
+* **Sanitize Storage:** Triage S3 access logs for the exposure window, remove unapproved uploads such as OPENBUCKETPLEASEFIX.txt, and preserve artefacts for legal and compliance review.​
+
+**Short-Term Recovery (next 1-2 weeks**
+* **Enforce MFA:** Implement an IAM policy denying all actions unless *aws:MultiFactorAuthPresent* is true. This directly addresses the vulnerability found in Section 4.2.
+* **Endpoint Isolation:** Isolate BSTOLL-L.froth.ly for full forensic analysis, including malware scanning, credential dump checks, and review of administrative tool usage.
+
+**Long-Term SOC improvements (1-3 months)**
+* **Implement CSPM:** Implement a Cloud Security Posture Management (CSPM) capability (for example via AWS Config or equivalent) to continuously detect and auto‑remediate public S3 buckets and other high‑risk misconfigurations.
+* **Least Privilege Review:** Conduct a least‑privilege review of IAM users and roles, ensuring developers cannot modify global ACLs without change control and dual authorisation.
+* **Training and Awareness:** Integrate scenarios like this BOTSv3 incident into SOC runbooks and training so Tier 1–3 analysts can rapidly recognise similar patterns and execute coordinated response and recovery.
 
 ---
 
-## Video Presentation
-
----
-
-## References
+## 6. References
 
 * [1] https://www.paloaltonetworks.co.uk/cyberpedia/soc-roles-and-responsibilities
 * [2] https://auditboard.com/blog/nist-incident-response
+* [3] https://attack.mitre.org/techniques/T1530/
+* [4] https://attack.cloudfall.cn/techniques/T1021/
+* [5] https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/how-elastic-load-balancing-works.html
 
 ---
 
-## Apendix: Generative AI Declaration
+## 7. Appendix A: Video Presentation
+
+
+---
+
+## 8. Appendix B: Generative AI Declaration
