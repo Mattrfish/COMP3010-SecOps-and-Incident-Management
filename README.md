@@ -10,7 +10,8 @@
 ## Table of Contents
 1. [Introduction](#1-introduction)
 2. [SOC Roles & Incident Handling Methodology](#2-soc-roles--incident-handling-methodology)
-3. [Environment Setup & Data Ingestion](#3-environment-setup--data-ingestion)
+    * [2.1 Application of the NIST Cycle](#21-application-of-the-nist-cycle)
+3. [Environment Setup & Dataset Ingestion](#3-environment-setup--dataset-ingestion)
 4. [Incident Investigation (Guided Analysis)](#4-incident-investigation-guided-analysis)
     * [4.1 IAM Account Auditing](#41-iam-account-auditing-question-1)
     * [4.2 MFA Compliance Check](#42-mfa-compliance-check-question-2)
@@ -29,42 +30,35 @@
 
 ## 1. Introduction 
 
-This report presents a forensic investigation into security anomalies within Frothly’s cloud and endpoint infrastructure using the BOTSv3 dataset in Splunk. The scope is limited to AWS CloudTrail, S3 access logs, and Windows endpoint telemetry, with a focus on identifying misconfigurations and behaviours consistent with insider misuse or credential compromise. The primary audience is the Chief Information Security Officer (CISO) and security management team, and the report is written as an internal incident record to inform SOC process improvements.
+This report presents a forensic investigation into security anomalies within Frothly’s cloud and endpoint infrastructure using the BOTSv3 dataset in Splunk. The scope is limited to AWS CloudTrail, S3 access logs, and Windows endpoint telemetry, with a focus on identifying misconfigurations and behaviours consistent with insider misuse or credential compromise. The primary audience is the CISO and SOC team, and the report is written as an internal incident record to inform SOC process improvements.
 
-​BOTSv3 simulates a production environment in which Frothly hosts web workloads on AWS, stores application code in S3, and joins endpoints to the froth.ly domain. Within this context, the investigation aims to:
-
-* ​Identify IAM users and endpoints involved in risky or anomalous activity.
-
-* Determine how an S3 bucket became publicly accessible and whether it was abused.
-
-* Assess the impact of missing MFA controls and endpoint configuration drift on overall SOC risk.
-
-The report is structured as follows: Section 2 links the investigation to SOC tiers and the NIST incident lifecycle; Section 3 documents Splunk setup and dataset ingestion; Section 4 provides guided analysis answering the BOTSv3 question set; Section 5 consolidates conclusions and presents a prioritised action plan. 
+The report is structured as follows: Section 2 links the investigation to SOC roles and the NIST incident lifecycle; Section 3 documents Splunk setup and dataset ingestion; Section 4 provides guided analysis answering the BOTSv3 question set; Section 5 consolidates conclusions and presents a prioritised action plan. 
 
 ---
 
 ## 2. SOC Roles & Incident Handling Methodology 
 
 Security Operations Centers (SOC) rely on a tiered structure to manage alert fatigue and ensure critical threats are escalated appropriately [1]. 
-* **Tier 1 Analysts (Triage):** Monitor SIEM alerts (e.g., Splunk) to distinguish false positives from genuine security events. 
+* **Tier 1 Analysts (Triage):** Monitor SIEM alerts to distinguish false positives from genuine security events. 
 * **Tier 2 Analysts (Incident Responders):** This investigation assumes the role of a Tier 2 analyst. The focus is not merely viewing alerts, but correlating data across multiple sourcetypes (AWS, Endpoint, Network) to reconstruct the attack timeline. 
 * **Tier 3 Analysts (Threat Hunters):** Proactively search for threats that evade automated detection rules. 
 
-### Application of the NIST Cycle 
+### 2.1 Application of the NIST Cycle
 
-This investigation follows the **NIST SP 800-61** Incident Response Lifecycle [2]: 
-1. **Preparation:** The environment was prepared by ingesting BOTSv3 data into a localized Splunk instance (See Section 3). 
-2. **Detection & Analysis:** Utilizing Splunk Search Processing Language (SPL) to query *aws:cloudtrail* and *hardware* logs to identify the scope of the breach. 
-3. **Containment, Eradication & Recovery:** (Detailed in Section 5) Proposing immediate revocation of public S3 access and credential rotation. 
-4. **Post-Incident Activity:** Documenting the "Lessons Learned" to prevent recurrence through stricter IAM policies.
+BOTSv3 simulates Frothly's production environment, including AWS web workloads, S3 storage, and corporate endpoints. Aligned with the **NIST SP 800-61 Rev 3** lifecycle, this investigation aims to [2]:
+
+* **Identify & Protect:** Audit user accounts and endpoints to uncover 'Least Privilege' violations.
+
+* **Detect & Respond:** Analyze logs to determine exactly how an S3 bucket was exposed, who was responsible, and what data was at risk.
+
+* **Recover & Govern:** Assess the failures in configuration and governance that caused the breach to propose strategic improvements for future resilience.
+
 
 ---
 
-## 3. Installation & Data Preparation
+## 3. Environment Setup & Dataset Ingestion
 
-### Environment Setup
-
-### 3.1 Splunk Installation 
+### 3.1 Environment Setup
 
 A local Splunk Enterprise instance was deployed on an Ubuntu virtual machine to mimic how a SOC would typically host a centralised SIEM in a controlled environment. The VM approach isolates the BOTSv3 lab from production resources while still allowing realistic log volume and query performance. Splunk was installed under /opt to follow Linux best practice for third‑party software and keep application files separate from the OS.
 
@@ -75,25 +69,16 @@ sudo tar -xvzf splunk-*.tgz -C /opt
 sudo /opt/splunk/bin/splunk start --accept-license
 ```
 
-![Figure 1](Images/SplunkServer.png)
-*Figure 1: Verification of Splunk services running on localhost.*
+![Figure 1: Verification of Splunk services running on localhost.](Images/SplunkServer.png)
 
 ### 3.2 Dataset Ingestion
 
 The BOTSv3 dataset was downloaded from the official Splunk GitHub repository and installed as a dedicated app, with all events indexed into a separate botsv3 index. This separation prevents test data from polluting the default index and allows focused searches using index=botsv3 across multiple sourcetypes such as aws:cloudtrail, aws:s3:accesslogs, WinHostMon, hardware and access_combined. Basic validation was performed by checking index event counts, confirming that expected sourcetypes were present, and running sample searches to ensure CloudTrail, S3 and endpoint logs were ingested correctly before starting the investigation.
 
-![Figure 2](Images/BOTSv3Github.png)
-*Figure 2: BOTSv3 dataset being retrieved from the Git repository.*
-![Figure 3](Images/BOTSv3DataSet.png)
-*Figure 3: The extracted dataset directory.*
-
-```bash
-cp -r botsv3_data_set /opt/splunk/etc/apps/
-```
-![4](Images/BOTSv3AppsInstall.png)
-*Figure 4: Dataset ingested as an app.*
-![5](Images/BOTSv3Index.png)
-*Figure 5: Confirmation of indexed events within the BOTSv3 dataset.*
+![Figure 2: BOTSv3 dataset being retrieved from the Git repository.](Images/BOTSv3Github.png)
+![Figure 3: The extracted dataset directory.](Images/BOTSv3DataSet.png)
+![Figure 4: Dataset ingested as an app.](Images/BOTSv3AppsInstall.png)
+![Figure 5: Confirmation of indexed events within the BOTSv3 dataset.](Images/BOTSv3Index.png)
 
 ---
 
@@ -113,8 +98,7 @@ index=botsv3 sourcetype="aws:cloudtrail" userIdentity.type="IAMUser"
 
 **Finding:** The users **bstoll,btun,splunk_access,** and **web_admin** were identified accessing AWS services. Knowing exactly which IAM users access AWS services allows the SOC to baseline normal behaviour, detect misuse of generic accounts like web_admin, and investigate suspicious or dormant accounts that suddenly become active.
 
-![Figure 6](Images/Question1.png)
-Figure 6: Statistical table of IAM users and the specific AWS services they accessed.
+![Figure 6: Statistical table of IAM users and the specific AWS services they accessed.](Images/Question1.png)
 
 ### 4.2 MFA Compliance Check (Question 2)
 
@@ -122,19 +106,17 @@ Figure 6: Statistical table of IAM users and the specific AWS services they acce
 
 **Analysis:** To identify AWS API activity occurring without MFA, I performed a keyword search using **mfa** against the **aws:cloudtrail** sourcetype. I explicitly excluded ConsoleLogin events to isolate programmatic API calls from web interface logins. This revealed the nested JSON path **userIdentity.sessionContext.attributes.mfaAuthenticated**. 
 
-**Finding: 2,155 events** were generated with **mfaAuthenticated=false**. This high volume of non-MFA activity represents a critical vulnerability. Monitoring the mfaAuthenticated field enables the SOC to build alerts for high‑risk API activity without MFA, prioritise incident response on compromised keys, and drive enforcement of stronger authentication policies across cloud accounts [6]. 
+**Finding: 2,155 events** were generated with **mfaAuthenticated=false**. This volume of non-MFA activity represents a violation of the Protect function of the NIST CSF (Identity Management). In a Zero Trust architecture, the assumption that a valid API key implies a trusted user is known as "Implicit Trust"—a vulnerability that allowed the attacker to bypass verification. Monitoring this field enables the SOC to build alerts for high‑risk API activity, prioritise incident response on compromised keys, and drive enforcement of stronger authentication policies [6]. 
 
 ```bash
 # Query: 
 index=botsv3 sourcetype="aws:cloudtrail" eventName!="ConsoleLogin" | stats count by userIdentity.sessionContext.attributes.mfaAuthenticated 
 ```
 
-![Figure 7](Images/Question2.0.png)
-*Figure 8: The nested JSON path identifying MFA status.*
-![Figure 8](Images/Question2.1.png)
-*Figure 8: Count of events where MFA authentication was absent.*
+![Figure 7: The nested JSON path identifying MFA status.](Images/Question2.0.png)
+![Figure 8: Count of events where MFA authentication was absent.](Images/Question2.1.png)
 
-### Web Server Asset Identification (Question 3)
+### 4.3 Web Server Asset Identification (Question 3)
 
 **Objective:** Characterize the hardware profile of the web servers.
 
@@ -148,10 +130,8 @@ index=botsv3 sourcetype=”hardware”
 index=botsv3 sourcetype="access_combined" host="gacrux.i-0920036c8ca91e501" http*
 ```
 
-![Figure 9](Images/Question3.png)
-*Figure 9: List of different web servers*
-![Figure 10](Images/Question3.1.png)
-*Figure 10: Hardware log analysis identifying the CPU type.*
+![Figure 9: List of different web servers](Images/Question3.png)
+![Figure 10: Hardware log analysis identifying the CPU type.](Images/Question3.1.png)
 
 ### 4.4 S3 Bucket Permissions Analysis (Question 4)
 
@@ -161,7 +141,7 @@ index=botsv3 sourcetype="access_combined" host="gacrux.i-0920036c8ca91e501" http
 
 **Finding:** I discovered the field requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI. Checking the values for this field, I spotted http://acs.amazonaws.com/groups/global/AllUsers - this AWS identifier for public access. I added this to my search to confirm the single relevant event, pointing to Event ID **ab45689d-69cd-41e7-8705-5350402cf7ac**.
 
-Detecting PutBucketAcl events that grant AllUsers access lets the SOC create real‑time detections for public S3 exposures and quickly contain misconfigurations before attackers can discover and exploit open buckets.
+While detecting PutBucketAcl events allows for reactive containment, the fact that this command succeeded reveals a systemic governance failure. Modern AWS environments utilize "S3 Block Public Access" settings at the account level to override such ACLs. The success of this action proves that Frothly's SOC lacks a Cloud Security Posture Management (CSPM) tool [7] to enforce baseline compliance, allowing a simple configuration error to escalate into a public data breach
 
 ```bash
 # Query: 
@@ -169,12 +149,9 @@ index=botsv3 sourcetype="aws:cloudtrail" eventName="PutBucketAcl"
 requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI="http://acs.amazonaws.com/groups/global/AllUsers" 
 ```
 
-![Figure 11](Images/Question4.0.png)
-*Figure 11: The SPL query for S3 buckets*
-![Figure 12](Images/Question4.1.png)
-*Figure 12: The fields sidebar showing the ACL URI JSON Path*
-![Figure 13](Images/Question4.2.png)
-*Figure 13: JSON payload identifying the specific Event ID granting 'AllUsers' access.*
+![Figure 11: The SPL query for S3 buckets](Images/Question4.0.png)
+![Figure 12: The fields sidebar showing the ACL URI JSON Path](Images/Question4.1.png)
+![Figure 13: JSON payload identifying the specific Event ID granting 'AllUsers' access.](Images/Question4.2.png)
 
 ### 4.5 Attribution of Actions (Question 5)
 
@@ -184,8 +161,7 @@ requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI="htt
 
 **Finding:** The user **bstoll** (Bud) executed the command. This allows the SOC to pivot the investigation: is Bud a malicious insider, or were his non-MFA credentials (identified in Section 4.2) compromised?
 
-![Figure 14](Images/Question5.png)
-*Figure 14: Attribution of the 'PutBucketAcl' event to user 'bstoll'.*
+![Figure 14: Attribution of the 'PutBucketAcl' event to user 'bstoll'.](Images/Question5.png)
 
 ### 4.6 Data Exposure Scope (Question 6)
 
@@ -195,8 +171,7 @@ requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI="htt
 
 **Finding:** The bucket name is **frothlywebcode** which implies source code exposure, risking API keys or IP theft (**MITRE ATT&CK T1530** [3]). The identification allows the SOC to estimate business impact and prioritise remediation.
 
-![Figure 15](Images/Question6.png)
-*Figure 15: Target resource identification confirming the bucket 'frothlywebcode'.*
+![Figure 15: Target resource identification confirming the bucket 'frothlywebcode'.](Images/Question6.png)
 
 ### 4.7 Unauthorized Artifact Upload (Question 7)
 
@@ -211,8 +186,7 @@ requestParameters.AccessControlPolicy.AccessControlList.Grant{}.Grantee.URI="htt
 index=botsv3 sourcetype="aws:s3:accesslogs" .txt PUT 
 ```
 
-![Figure 16](Images/Question7.png)
-Figure 16: Access logs confirming the upload of the text file.
+![Figure 16: Access logs confirming the upload of the text file.](Images/Question7.png)
 
 ### 4.8 Endpoint Anomalies (Question 8)
 
@@ -220,7 +194,7 @@ Figure 16: Access logs confirming the upload of the text file.
 
 **Analysis:** Using sourcetype="WinHostMon", I grouped hosts by OS version. However, the standard host field only provided the short hostname, leaving the domain uncertain. To resolve this, I performed some investigative digging through the raw log entries for BSTOLL-L.
 
-**Finding:** The ComputerName field reveals the full path BSTOLL-L.froth.ly; unlike most hosts running Windows 10 Pro, this endpoint runs Windows 10 Enterprise, indicating an administrator workstation linked to the same user and timeframe as the risky cloud activity. This makes it a high-value assest and priority for SOC containment. If compromised, BSTOLL-L.froth.ly could hold credentials enabling lateral movement (MITRE T1021) [4] across the domain, escalating the breach from a cloud misconfiguration to a full domain compromise.
+**Finding:** The ComputerName field reveals the full path BSTOLL-L.froth.ly; unlike most hosts running Windows 10 Pro, this endpoint runs Windows 10 Enterprise, indicating an administrator workstation linked to the same user and timeframe as the risky cloud activity. This makes it a high-value assest and priority for SOC containment. If compromised, BSTOLL-L.froth.ly could hold credentials enabling lateral movement [4] across the domain, escalating the breach from a cloud misconfiguration to a full domain compromise.
 
 ```bash
 # Query: 
@@ -228,10 +202,8 @@ index=botsv3 sourcetype="WinHostMon" | stats count by host, OS Version
 index=botsv3 host="BSTOLL-L" computername
 ```
 
-![Figure 17](Images/Question8.png)
-*Figure 17: OS Version comparison identifying the outlier endpoint.*
-![Figure 18](Images/Question8.1.png)
-*Figure 18: The full bstoll computername.*
+![Figure 17: OS Version comparison identifying the outlier endpoint.](Images/Question8.png)
+![Figure 18: The full bstoll computername.](Images/Question8.1.png)
 
 ---
 
@@ -246,12 +218,12 @@ From a SOC point of view, the case highlights the need to link Tier 1 CloudTrail
 * Rotate credentials for bstoll and related IAM roles, and remove unapproved uploads such as *OPEN_BUCKET_PLEASE_FIX.txt* after preserving evidence.
 
 ### 5.2 Short‑term recovery (next 1–2 weeks)
-* Enforce an IAM condition that denies API actions unless *aws:MultiFactorAuthPresent* is true for all human users and high‑risk roles.
-* Isolate *BSTOLL-L.froth.ly* for full forensic analysis, including malware scanning, credential dump checks, and review of administrative tool usage.
-* Develop and deploy Splunk correlation rules that alert on *PutBucketAcl* granting public access, high‑volume non‑MFA API activity, and changes originating from privileged endpoints.
+* Enforce an IAM condition that denies API actions unless MFA is true for all human users and high‑risk roles.
+* Isolate **BSTOLL-L.froth.ly** for full forensic analysis, including malware scanning, credential dump checks, and review of administrative tool usage.
+* Develop and deploy rules that alert on *PutBucketAcl* granting public access, high‑volume non‑MFA API activity, and changes originating from privileged endpoints.
 
 ### 5.3 Long‑term SOC improvements (1–3 months)
-* Implement a Cloud Security Posture Management (CSPM) capability (for example via AWS Config or equivalent) to continuously detect and auto‑remediate public S3 buckets and other high‑risk misconfigurations.
+* Implement a CSPM capability to continuously detect and auto‑remediate public S3 buckets and other misconfigurations [7].
 * Conduct a least‑privilege review of IAM users and roles, ensuring developers cannot modify global ACLs without change control and dual authorisation.
 * Integrate scenarios like this BOTSv3 incident into SOC runbooks and training so Tier 1–3 analysts can rapidly recognise similar patterns and execute coordinated response and recovery.
 
@@ -259,12 +231,13 @@ From a SOC point of view, the case highlights the need to link Tier 1 CloudTrail
 
 ## 6. References
 
-* [1] https://www.paloaltonetworks.co.uk/cyberpedia/soc-roles-and-responsibilities
-* [2] https://auditboard.com/blog/nist-incident-response
-* [3] https://attack.mitre.org/techniques/T1530/
-* [4] https://attack.cloudfall.cn/techniques/T1021/
-* [5] https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/how-elastic-load-balancing-works.html
-[6] https://www.bugcrowd.com/blog/mfa-security-part-1-how-attackers-bypass-multi-factor-authentication/
+* [1] Security Operations Center (SOC) roles and Responsibilities (no date) Palo Alto Networks. Available at: https://www.paloaltonetworks.co.uk/cyberpedia/soc-roles-and-responsibilities (Accessed: 07 December 2025). 
+* [2] Nelson, A. et al. (2025) Incident Response Recommendations and Considerations for Cybersecurity Risk Management, NIST. Available at: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-61r3.pdf (Accessed: 07 December 2025). (accessed Dec. 7, 2025). 
+* [3] Borges, D. and @1njection (2017) Remote Services: SMB/windows admin shares, Remote Services: SMB/Windows Admin Shares, Sub-technique T1021.002 - Enterprise | MITRE ATT&CK®. Available at: https://attack.cloudfall.cn/techniques/T1021/002/ (Accessed: 07 December 2025). 
+* [4] AppOmni et al. (2019) Data from cloud storage, Data from Cloud Storage, Technique T1530 - Enterprise | MITRE ATT&CK®. Available at: https://attack.mitre.org/techniques/T1530/ (Accessed: 07 December 2025). 
+* [5] (No date) How elb works - elastic load balancing. Available at: https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/how-elastic-load-balancing-works.html (Accessed: 07 December 2025). 
+* [6] G, Alistair. (22/01/2025) How attackers bypass multi-factor authentication. Available at: https://www.bugcrowd.com/blog/mfa-security-part-1-how-attackers-bypass-multi-factor-authentication/ (Accessed: 07 December 2025). 
+* [7] (12/01/2025) What is Cloud Security Posture Management (CSPM). Available at: https://learn.microsoft.com/en-us/azure/defender-for-cloud/concept-cloud-security-posture-management (Accessed: 07 December 2025).
 
 ---
 
