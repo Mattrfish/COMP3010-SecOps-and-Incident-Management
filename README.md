@@ -93,7 +93,7 @@ The BOTSv3 dataset was downloaded from the official Splunk GitHub repository and
 ```bash 
 # Query: 
 index=botsv3 sourcetype="aws:cloudtrail" userIdentity.type="IAMUser"
-| stats values(eventSource) by “Services Accessed” by userIdentity.userName 
+| stats values(eventSource) as “Services Accessed” by userIdentity.userName 
 ```
 
 **Finding:** The users **bstoll,btun,splunk_access,** and **web_admin** were identified accessing AWS services. Knowing exactly which IAM users access AWS services allows the SOC to baseline normal behaviour, detect misuse of generic accounts like web_admin, and investigate suspicious or dormant accounts that suddenly become active.
