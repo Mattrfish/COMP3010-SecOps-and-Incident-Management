@@ -243,6 +243,7 @@ From a SOC point of view, the case highlights the need to link Tier 1 CloudTrail
 
 ## 7. Appendix A: Video Presentation
 
+https://youtu.be/WJN0MkBIe7c
 
 ---
 
