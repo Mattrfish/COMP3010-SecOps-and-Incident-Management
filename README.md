@@ -255,10 +255,10 @@ Assisted Work	A1 – Idea Generation and Problem Exploration
 Used to generate project ideas, explore different approaches to solving a problem, or suggest features for software or systems. Students must critically assess AI-generated suggestions and ensure their own intellectual contributions are central.	
 
 	A2 - Planning & Structuring Projects
-AI may help outline the structure of reports, documentation and projects. The final structure and implementation must be the student’s own work.	☐
+AI may help outline the structure of reports, documentation and projects. The final structure and implementation must be the student’s own work.	
 
 	A3 – Code Architecture
-AI tools maybe used to help outline code architecture (e.g. suggesting class hierarchies or module breakdowns). The final code structure must be the student’s own work.	☐
+AI tools maybe used to help outline code architecture (e.g. suggesting class hierarchies or module breakdowns). The final code structure must be the student’s own work.	
 
 	A4 – Research Assistance
 Used to locate and summarise relevant articles, academic papers, technical documentation, or online resources (e.g. Stack Overflow, GitHub discussions. The interpretation and integration of research into the assignment remain the student’s responsibility.	
@@ -287,11 +287,12 @@ Please specify:
 Partnered Work	P1 - Generative AI tool usage has been used integrally for this assessment
 Students can adopt approaches that are compliant with instructions in the assessment brief.
 Please Specify:	
-• Research further concepts
-• Write/generate/troubleshoot scripts to facilitate analysis
-• Report generation and improvements
-• Readme report, script crafting.	
-*** All of the Above ***
+* Research further concepts
+* Write/generate/troubleshoot scripts to facilitate analysis
+* Report generation and improvements
+* Readme report, script crafting.
+
+***All of the Above***
 
 Please provide details of AI usage and which elements of the coursework this relates to:
 SPL queries, rewording readme report, research of splunk understanding.
